@@ -1,0 +1,153 @@
+
+## Statics
+
+# Static at crate level
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::quux()
+
+# Static in module
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::quux()
+
+# Static in function
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::quux()
+
+# Static with mixed module/function path
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Static with unicode name
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Static with unicode module in path
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Static with disambiguated name
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Static with disambiguated module in path
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Static with generic function in path
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Static with closure in path
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Static with specialized trait impl in path
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+
+## Non-generic functions
+
+# Free-standing function at crate level
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::quux()
+
+# Free-standing function in module
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::quux()
+
+# Free-standing function in function
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::quux()
+
+# Free-standing function with mixed module/function path
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Free-standing function with unicode name
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Free-standing function with unicode module in path
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Free-standing function with disambiguated name
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Free-standing function with disambiguated module in path
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Free-standing function with generic function in path
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Free-standing function with closure in path
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Free-standing function with specialized trait impl in path
+
+
+
+## Generic functions
+
+# Generic function with basic type argument
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Generic function with named type argument
+_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+
+# Generic function with tuple type argument
+
+# Generic function with shared reference type argument
+
+# Generic function with mutable reference type argument
+
+# Generic function with const pointer type argument
+
+# Generic function with mut pointer type argument
+
+# Generic function with function type argument
+
+# Generic function with unsized array type argument
+
+# Generic function with sized array type argument
+
+# Generic function with unicode named type argument
+
+# Generic function with closure type argument
+
+# Generic function with disambiguated named type arguments
+
+# Generic function with named type argument defined in specialized trait impl
+
+
+## Inherent methods
+
+# Inherent non-generic method
+
+# Inherent method with generic impl
+
+# Generic inherent method
+
+# Generic inherent method with generic impl
+
+# Generic inherent method with generic impl
+
+# Inherent method with basic self type
+
+# Inherent method with tuple self type
+
+# Inherent method with array self type
+
+# Inherent method with function self type
+
+# Inherent method with reference self type
+
+# Inherent method with pointer self type
+
+# Inherent method with disambiguated named self type
+
+
+
+### Trait methods
+
+
+### Items in specialized trait impls
+
+
+## Closures
+
+# Closure in free-standing function
+
+# Closure in closure
+
+# Closure in inherent method
+
+# Closure in trait method
+
+
+## Shims
+
