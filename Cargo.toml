@@ -1,0 +1,10 @@
+[package]
+name = "std-mangle-rs"
+version = "0.1.0"
+authors = ["Michael Woerister <michaelwoerister@posteo>"]
+
+[dev-dependencies]
+quickcheck = "0.7.1"
+rand = "0.5"
+rand_core = "0.2.1"
+unicode-xid = "0.1.0"
