@@ -8,8 +8,9 @@ extern crate rand;
 extern crate unicode_xid;
 
 pub mod ast;
-pub mod write;
 pub mod compress;
+pub mod mangle;
+pub mod write;
 
 #[cfg(test)]
 mod qc;

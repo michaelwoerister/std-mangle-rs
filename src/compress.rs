@@ -6,24 +6,27 @@ use std::sync::Arc;
 struct Dictionary {
     prefixes: HashMap<Arc<NamePrefix>, Subst>,
     prefixes_with_params: HashMap<Arc<NamePrefixWithParams>, Subst>,
+    qnames: HashMap<Arc<FullyQualifiedName>, Subst>,
     types: HashMap<Arc<Type>, Subst>,
 
     counter: usize,
 }
 
 impl Dictionary {
-    fn alloc_subst(&mut self) -> Subst {
+    fn alloc_subst<T, D>(&mut self, node: &Arc<T>, dict: D)
+        where D: FnOnce(&mut Self) -> &mut HashMap<Arc<T>, Subst>,
+              T: ::std::hash::Hash + Eq,
+    {
         let subst = Subst(self.counter);
-
         self.counter += 1;
-
-        subst
+        dict(self).insert(node.clone(), subst);
     }
 
     fn new() -> Dictionary {
         Dictionary {
             prefixes: HashMap::new(),
             prefixes_with_params: HashMap::new(),
+            qnames: HashMap::new(),
             types: HashMap::new(),
             counter: 0,
         }
@@ -35,7 +38,7 @@ pub fn compress(symbol: &Symbol) -> Symbol {
     let mut dict = Dictionary::new();
 
     Symbol {
-        name: compress_name_prefix_with_params(&symbol.name, &mut dict),
+        name: compress_fully_qualified_name(&symbol.name, &mut dict),
         instantiating_crate: compress_name_prefix(&symbol.instantiating_crate, &mut dict),
     }
 }
@@ -46,9 +49,23 @@ fn compress_name_prefix(name_prefix: &Arc<NamePrefix>, dict: &mut Dictionary) ->
         return Arc::new(NamePrefix::Subst(subst));
     }
 
-    let compressed = match &**name_prefix {
+    let compressed = match **name_prefix {
         NamePrefix::CrateId { .. } => {
             name_prefix.clone()
+        }
+        NamePrefix::TraitImpl { ref self_type, ref impled_trait } => {
+            let new_self_type = compress_type(self_type, dict);
+            let new_impled_trait = compress_fully_qualified_name(impled_trait, dict);
+
+            if Arc::ptr_eq(self_type, &new_self_type) &&
+               Arc::ptr_eq(impled_trait, &new_impled_trait) {
+                name_prefix.clone()
+            } else {
+                Arc::new(NamePrefix::TraitImpl {
+                    self_type: new_self_type,
+                    impled_trait: new_impled_trait,
+                })
+            }
         }
         NamePrefix::Node { ref prefix, ref ident } => {
             let new_prefix = compress_name_prefix_with_params(prefix, dict);
@@ -67,8 +84,7 @@ fn compress_name_prefix(name_prefix: &Arc<NamePrefix>, dict: &mut Dictionary) ->
         }
     };
 
-    let subst = dict.alloc_subst();
-    dict.prefixes.insert(name_prefix.clone(), subst);
+    dict.alloc_subst(name_prefix, |d| &mut d.prefixes);
 
     compressed
 }
@@ -82,7 +98,7 @@ fn compress_name_prefix_with_params(name_prefix: &Arc<NamePrefixWithParams>,
         return Arc::new(NamePrefixWithParams::Subst(subst));
     }
 
-    let (compressed, new_dict_entry) = match &**name_prefix {
+    let (compressed, new_dict_entry) = match **name_prefix {
         NamePrefixWithParams::Node { ref prefix, ref args, } => {
             let new_prefix = compress_name_prefix(prefix, dict);
 
@@ -105,9 +121,39 @@ fn compress_name_prefix_with_params(name_prefix: &Arc<NamePrefixWithParams>,
     };
 
     if new_dict_entry {
-        let subst = dict.alloc_subst();
-        dict.prefixes_with_params.insert(name_prefix.clone(), subst);
+        dict.alloc_subst(name_prefix, |d| &mut d.prefixes_with_params);
     }
+
+    compressed
+}
+
+
+fn compress_fully_qualified_name(qname: &Arc<FullyQualifiedName>,
+                                 dict: &mut Dictionary)
+                                 -> Arc<FullyQualifiedName> {
+
+    if let Some(&subst) = dict.qnames.get(qname) {
+        return Arc::new(FullyQualifiedName::Subst(subst));
+    }
+
+    let compressed = match **qname {
+        FullyQualifiedName::Name { ref name } => {
+            let new_name = compress_name_prefix_with_params(name, dict);
+
+            if Arc::ptr_eq(name, &new_name) {
+                qname.clone()
+            } else {
+                Arc::new(FullyQualifiedName::Name {
+                    name: new_name,
+                })
+            }
+        }
+        FullyQualifiedName::Subst(_) => {
+            unreachable!()
+        }
+    };
+
+    dict.alloc_subst(qname, |d| &mut d.qnames);
 
     compressed
 }
@@ -140,7 +186,7 @@ fn compress_type(ty: &Arc<Type>, dict: &mut Dictionary) -> Arc<Type> {
 
         Type::Named(ref name) => {
             // Always return here so we don't add something to the dictionary.
-            return compress_dedup(ty, name, dict, compress_name_prefix_with_params, Type::Named)
+            return compress_dedup(ty, name, dict, compress_fully_qualified_name, Type::Named)
         }
 
         Type::Ref(ref inner) => {
@@ -190,8 +236,7 @@ fn compress_type(ty: &Arc<Type>, dict: &mut Dictionary) -> Arc<Type> {
         }
     };
 
-    let subst = dict.alloc_subst();
-    dict.types.insert(ty.clone(), subst);
+    dict.alloc_subst(ty, |d| &mut d.types);
 
     compressed
 }

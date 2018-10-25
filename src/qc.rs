@@ -10,11 +10,10 @@ use std::cmp;
 
 impl Arbitrary for IdentTag {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        match g.next_u32() % 4 {
+        match g.next_u32() % 3 {
             0 => IdentTag::ValueNs,
             1 => IdentTag::TypeNs,
             2 => IdentTag::Closure,
-            3 => IdentTag::Trait,
             _ => unreachable!(),
         }
     }
@@ -75,7 +74,6 @@ impl Arbitrary for Type {
         }
     }
 }
-
 
 impl Arbitrary for ParamBound {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
@@ -153,6 +151,14 @@ impl Arbitrary for NamePrefixWithParams {
         }
 
         node
+    }
+}
+
+impl Arbitrary for FullyQualifiedName {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        FullyQualifiedName::Name {
+            name: Arbitrary::arbitrary(g)
+        }
     }
 }
 

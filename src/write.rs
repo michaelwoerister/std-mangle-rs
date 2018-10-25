@@ -32,23 +32,24 @@ impl Display for Subst {
     }
 }
 
-impl Display for NamePrefix {
-    fn fmt(&self, out: &mut Formatter) -> Result<(), Error> {
-        match *self {
-            NamePrefix::CrateId { ref name, ref dis } => {
-                let len = name.len() + dis.len() + 1;
-                write!(out, "{}{}_{}", len, name, dis)
-            }
-            NamePrefix::Node { .. } => { //ref prefix, ref _ident, ref _args } => {
-                panic!("TODO")
-                // write!(out, "{}{}", prefix, ident)
-            }
-            NamePrefix::Subst(subst) => {
-                subst.fmt(out)
-            }
-        }
-    }
-}
+// impl Display for NamePrefix {
+//     fn fmt(&self, out: &mut Formatter) -> Result<(), Error> {
+//         match *self {
+//             NamePrefix::CrateId { .. } => {
+//                 // let len = name.len() + dis.len() + 1;
+//                 // write!(out, "{}{}_{}", len, name, dis)
+//                 panic!("TODO")
+//             }
+//             NamePrefix::Node { .. } => { //ref prefix, ref _ident, ref _args } => {
+//                 panic!("TODO")
+//                 // write!(out, "{}{}", prefix, ident)
+//             }
+//             NamePrefix::Subst(subst) => {
+//                 subst.fmt(out)
+//             }
+//         }
+//     }
+// }
 
 // #[cfg(test)]
 // mod tests {

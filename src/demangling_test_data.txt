@@ -1,8 +1,12 @@
 
+## Basic Types
+
+
+
 ## Statics
 
 # Static at crate level
-_RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::quux()
+_RN16mycrate_abcd12343FOOVE mycrate[abcd123f]::FOO
 
 # Static in module
 _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::quux()
@@ -101,7 +105,12 @@ _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
 
 # Generic function with disambiguated named type arguments
 
+# Generic function with named type argument defined in simple trait impl
+_RN8std_23453mem8align_ofINX16mycrate_abcd123f9SomeTraitIjEEE std[2345]::mem::align_of<<usize as SomeTrait>::foo::Bar>()
+
 # Generic function with named type argument defined in specialized trait impl
+
+
 
 
 ## Inherent methods
@@ -133,6 +142,9 @@ _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
 
 
 ### Trait methods
+
+# Non-generic trait method
+_R X 16mycrate_abcd123f 9SomeTrait IjE E <usize as SomeTrait>::foo()
 
 
 ### Items in specialized trait impls

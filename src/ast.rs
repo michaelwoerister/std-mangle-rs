@@ -5,7 +5,6 @@ pub enum IdentTag {
     ValueNs,
     TypeNs,
     Closure,
-    Trait
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
@@ -24,6 +23,10 @@ pub enum NamePrefix {
         name: String,
         dis: String,
     },
+    TraitImpl {
+        self_type: Arc<Type>,
+        impled_trait: Arc<FullyQualifiedName>,
+    },
     Node {
         prefix: Arc<NamePrefixWithParams>,
         ident: Ident,
@@ -40,6 +43,13 @@ pub enum NamePrefixWithParams {
     Subst(Subst),
 }
 
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+pub enum FullyQualifiedName {
+    Name {
+        name: Arc<NamePrefixWithParams>,
+    },
+    Subst(Subst),
+}
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct GenericArgumentList {
@@ -55,7 +65,7 @@ pub enum Type {
     RawPtrConst(Arc<Type>),
     RawPtrMut(Arc<Type>),
     Tuple(Vec<Arc<Type>>),
-    Named(Arc<NamePrefixWithParams>),
+    Named(Arc<FullyQualifiedName>),
     GenericParam(String),
     Fn {
         return_type: Arc<Type>,
@@ -105,7 +115,7 @@ pub enum BasicType {
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Symbol {
-    pub name: Arc<NamePrefixWithParams>,
+    pub name: Arc<FullyQualifiedName>,
     pub instantiating_crate: Arc<NamePrefix>,
 }
 
@@ -128,10 +138,6 @@ impl Ident {
 
     pub fn closure(ident: &str) -> Ident {
         Ident::new(ident, IdentTag::Closure, 0)
-    }
-
-    pub fn trait_(ident: &str) -> Ident {
-        Ident::new(ident, IdentTag::Trait, 0)
     }
 }
 
