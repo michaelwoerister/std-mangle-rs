@@ -161,10 +161,10 @@ fn compress_fully_qualified_name(qname: &Arc<FullyQualifiedName>,
 fn compress_generic_argument_list(args: &GenericArgumentList, dict: &mut Dictionary) -> GenericArgumentList {
     GenericArgumentList {
         params: args.params.iter().map(|t| compress_type(t, dict)).collect(),
-        bounds: args.bounds.iter().map(|b| compress_param_bound(b, dict)).collect(),
     }
 }
 
+#[allow(unused)]
 fn compress_param_bound(b: &Arc<ParamBound>, dict: &mut Dictionary) -> Arc<ParamBound> {
     Arc::new(ParamBound {
         param_name: b.param_name.clone(),
@@ -200,6 +200,9 @@ fn compress_type(ty: &Arc<Type>, dict: &mut Dictionary) -> Arc<Type> {
         }
         Type::RawPtrMut(ref inner) => {
             compress_dedup(ty, inner, dict, compress_type, Type::RawPtrMut)
+        }
+        Type::Array(opt_size, ref inner) => {
+            compress_dedup(ty, inner, dict, compress_type, |inner| Type::Array(opt_size, inner))
         }
         Type::Tuple(ref tys) => {
             let new_tys: Vec<_> = tys.iter().map(|t| {

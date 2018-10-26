@@ -17,9 +17,8 @@ impl<'input> Parser<'input> {
 
         self.parse_symbol_prefix()?;
 
-        let qname = self.parse_fully_qualified_name()?;
-
-        panic!();
+        self.parse_fully_qualified_name()
+            .map_err(|s| format!("Parsing error at pos {}: {}", parser.pos, s))
     }
 
     fn cur(&self) -> u8 {
@@ -99,15 +98,27 @@ impl<'input> Parser<'input> {
 
     fn parse_fully_qualified_name(&mut self) -> Result<Arc<FullyQualifiedName>, String> {
 
-        // TODO subst
+        match self.cur() {
+            b'N' => {
+                self.pos += 1;
 
-        let name = self.parse_name_prefix_with_params()?;
-        assert_eq!(self.in[self.pos], b'E');
-        self.pos += 1;
+                let name = self.parse_name_prefix_with_params()?;
+                assert_eq!(self.in[self.pos], b'E');
+                self.pos += 1;
 
-        Ok(Arc::new(FullyQualifiedName::Name {
-            name
-        }))
+                Ok(Arc::new(FullyQualifiedName::Name {
+                    name
+                }))
+            }
+            b'S' => {
+                self.pos += 1;
+                let subst = self.parse_subst();
+                Ok(Arc::new(FullyQualifiedName::Subst(subst)))
+            }
+            other => {
+                return Err(format!("Expected 'N' or 'S', found {:?}", self.cur_char()));
+            }
+        }
     }
 
     fn parse_subst(&mut self) -> Result<Subst, String> {
@@ -139,28 +150,30 @@ impl<'input> Parser<'input> {
             b'S' => {
                 NamePrefix::Subst(self.parse_subst())
             }
+
             b'X' => {
-                //
                 self.pos += 1;
 
                 let self_type = self.parse_type()?;
                 let impled_trait = self.parse_fully_qualified_name()?;
 
                 NamePrefix::TraitImpl {
-
+                    self_type,
+                    impled_trait,
                 }
             }
+
             c if c.is_ascii_digit() => {
 
                 let ident = self.parse_len_prefixed_ident()?;
 
-                // TODO: split
-                // parse ident
-                // let crate_id = self.parse_crate_id()?;
-
-                NamePrefix::CrateId {
-                    name: String::new(),
-                    dis: String::new(),
+                if let Some(sep) = ident.rfind('_') {
+                    NamePrefix::CrateId {
+                        name: ident.ident[..sep].to_owned(),
+                        dis: ident.ident[sep + 1 ..].to_owned(),
+                    }
+                } else {
+                    return Err(format!("Crate ID does not contain disambiguator"));
                 }
             }
 
@@ -169,25 +182,43 @@ impl<'input> Parser<'input> {
             }
         });
 
-        let root = if self.in[self.pos] == b'S' {
-            let subst = self.parse_subst()?;
+        let root_args = if self.cur() == b'I' {
+            match **root {
+                NamePrefix::Subst(_) => {
+                    self.parse_generic_argument_list()?
+                }
+                _ => {
+                    return Err("Did not expect path root to have parameter list");
+                }
+            }
+        };
 
-            let params = if self.in[self.pos] == b'I' {
-                self.parse_generic_argument_list()?
-            } else {
-                vec![]
-            };
-
-            Arc::new(NamePrefixWithParams {
-                prefix: NamePrefix
-            })
-        } else {
-
-        }
+        let mut path = Arc::new(NamePrefixWithParams {
+            prefix: root,
+            args: root_args,
+        });
 
         while self.in[self.pos] != b'E' {
+            let ident = self.parse_len_prefixed_ident()?;
 
+            let prefix = Arc::new(NamePrefix::Node {
+                prefix: path,
+                ident,
+            });
+
+            let args = if self.cur() == b'I' {
+                self.parse_generic_argument_list()?
+            } else {
+                GenericArgumentList::empty()
+            };
+
+            path = Arc::new(NamePrefixWithParams {
+                prefix,
+                args,
+            });
         }
+
+        Ok(path)
     }
 }
 

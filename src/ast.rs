@@ -26,6 +26,7 @@ pub enum NamePrefix {
     TraitImpl {
         self_type: Arc<Type>,
         impled_trait: Arc<FullyQualifiedName>,
+        // TODO: bounds
     },
     Node {
         prefix: Arc<NamePrefixWithParams>,
@@ -54,7 +55,6 @@ pub enum FullyQualifiedName {
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct GenericArgumentList {
     pub params: Vec<Arc<Type>>,
-    pub bounds: Vec<Arc<ParamBound>>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
@@ -64,6 +64,7 @@ pub enum Type {
     RefMut(Arc<Type>),
     RawPtrConst(Arc<Type>),
     RawPtrMut(Arc<Type>),
+    Array(Option<usize>, Arc<Type>),
     Tuple(Vec<Arc<Type>>),
     Named(Arc<FullyQualifiedName>),
     GenericParam(String),
@@ -145,7 +146,6 @@ impl GenericArgumentList {
     pub fn new_empty() -> GenericArgumentList {
         GenericArgumentList {
             params: vec![],
-            bounds: vec![],
         }
     }
 }

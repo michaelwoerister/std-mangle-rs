@@ -1,7 +1,26 @@
 
 ## Basic Types
+_RN7std_xxx3FooIaE std[xxx]::Foo<i8>
+_RN7std_xxx3FooIsE std[xxx]::Foo<i16>
+_RN7std_xxx3FooIlE std[xxx]::Foo<i32>
+_RN7std_xxx3FooIxE std[xxx]::Foo<i64>
+_RN7std_xxx3FooInE std[xxx]::Foo<i128>
+_RN7std_xxx3FooIiE std[xxx]::Foo<isize>
 
+_RN7std_xxx3FooIhE std[xxx]::Foo<u8>
+_RN7std_xxx3FooItE std[xxx]::Foo<u16>
+_RN7std_xxx3FooImE std[xxx]::Foo<u32>
+_RN7std_xxx3FooIyE std[xxx]::Foo<u64>
+_RN7std_xxx3FooIoE std[xxx]::Foo<u128>
+_RN7std_xxx3FooIjE std[xxx]::Foo<usize>
 
+_RN7std_xxx3FooIfE std[xxx]::Foo<f32>
+_RN7std_xxx3FooIdE std[xxx]::Foo<f64>
+_RN7std_xxx3FooIbE std[xxx]::Foo<bool>
+_RN7std_xxx3FooIcE std[xxx]::Foo<char>
+_RN7std_xxx3FooIvE std[xxx]::Foo<()>
+_RN7std_xxx3FooIzE std[xxx]::Foo<!>
+_RN7std_xxx3FooIeE std[xxx]::Foo<str>
 
 ## Statics
 

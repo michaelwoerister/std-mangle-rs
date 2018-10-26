@@ -39,12 +39,10 @@ impl Arbitrary for GenericArgumentList {
             let g = &mut StdThreadGen::new(size);
             GenericArgumentList {
                 params: Arbitrary::arbitrary(g),
-                bounds: Arbitrary::arbitrary(g),
             }
         } else {
             GenericArgumentList {
                 params: vec![],
-                bounds: vec![],
             }
         }
     }
@@ -52,16 +50,26 @@ impl Arbitrary for GenericArgumentList {
 
 impl Arbitrary for Type {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        match g.next_u32() % 9 {
+        match g.next_u32() % 10 {
             0 => Type::BasicType(Arbitrary::arbitrary(g)),
             1 => Type::Ref(Arc::new(Arbitrary::arbitrary(g))),
             2 => Type::RefMut(Arc::new(Arbitrary::arbitrary(g))),
             3 => Type::RawPtrConst(Arc::new(Arbitrary::arbitrary(g))),
             4 => Type::RawPtrMut(Arc::new(Arbitrary::arbitrary(g))),
-            5 => Type::Tuple(Arbitrary::arbitrary(g)),
-            6 => Type::Named(Arc::new(Arbitrary::arbitrary(g))),
-            7 => Type::GenericParam(gen_valid_ident(g)),
-            8 => {
+            5 => {
+                let len = (g.next_u32() % 10000) as usize;
+                let len = if len >= 5000 {
+                    None
+                } else {
+                    Some(len)
+                };
+
+                Type::Array(len, Arbitrary::arbitrary(g))
+            },
+            6 => Type::Tuple(Arbitrary::arbitrary(g)),
+            7 => Type::Named(Arc::new(Arbitrary::arbitrary(g))),
+            8 => Type::GenericParam(gen_valid_ident(g)),
+            9 => {
                 Type::Fn {
                     return_type: Arc::new(Arbitrary::arbitrary(g)),
                     params: Arbitrary::arbitrary(g),
@@ -134,7 +142,6 @@ impl Arbitrary for NamePrefixWithParams {
             }),
             args: GenericArgumentList {
                 params: vec![],
-                bounds: vec![],
             }
         } ;
 

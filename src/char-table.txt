@@ -1,0 +1,96 @@
+a - i8
+b - bool
+c - char
+d - f64
+e - str
+f - f32
+g
+h - u8
+i - isize
+j - usize
+k
+l - i32
+m - u32
+n - i128
+o - u128
+p
+q
+r
+s - i16
+t - u16
+u
+v - ()
+w
+x - i64
+y - u64
+z - !
+
+
+A - array type
+B
+C - closure tag
+D
+E - End Marker
+F - function type
+G - generic param name
+H
+I - start of generic param list
+J
+K - abi marker for fn types
+L - variadic tag for fn types
+M
+N - named entity
+O - *mut
+P - *const
+Q - &mut
+R - &
+S - substitution marker
+T - tuple type
+U - unsafe tag for fn types
+V - value namespace tag
+W
+X - marker for impl-rooted paths
+Y
+Z
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+a
+b
+c
+d
+e
+f
+g
+h
+i
+j
+k
+l
+m
+n
+o
+p
+q
+r
+s
+t
+u
+v
+w
+x
+y
+z

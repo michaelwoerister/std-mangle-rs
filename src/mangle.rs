@@ -11,7 +11,6 @@ impl IdentTag {
     }
 }
 
-
 impl Ident {
     pub fn mangle(&self, out: &mut String) {
         let len = self.ident.len();
@@ -40,7 +39,7 @@ impl NamePrefix {
         match *self {
             NamePrefix::CrateId { ref name, ref dis } => {
                 let len = name.len() + dis.len() + 1;
-                write!(out, "N{}{}_{}", len, name, dis).unwrap();
+                write!(out, "{}{}_{}", len, name, dis).unwrap();
             }
             NamePrefix::TraitImpl { ref self_type, ref impled_trait } => {
                 out.push('X');
@@ -72,11 +71,11 @@ impl NamePrefixWithParams {
     }
 }
 
-
 impl FullyQualifiedName {
     pub fn mangle(&self, out: &mut String) {
         match *self {
             FullyQualifiedName::Name { ref name } => {
+                out.push('N');
                 name.mangle(out);
                 out.push('E');
             }
@@ -95,7 +94,6 @@ impl GenericArgumentList {
             param.mangle(out);
         }
         out.push('E');
-        // TODO: bounds
     }
 }
 
@@ -106,19 +104,26 @@ impl Type {
                 t.mangle(out);
             }
             Type::Ref(ref t) => {
-                out.push('R'); // TODO
+                out.push('R');
                 t.mangle(out);
             }
             Type::RefMut(ref t) => {
-                out.push('Q'); // TODO
+                out.push('Q');
                 t.mangle(out);
             }
             Type::RawPtrConst(ref t) => {
-                out.push('P'); // TODO
+                out.push('P');
                 t.mangle(out);
             }
             Type::RawPtrMut(ref t) => {
-                out.push('K'); // TODO
+                out.push('O');
+                t.mangle(out);
+            }
+            Type::Array(opt_size, ref t) => {
+                out.push('A');
+                if let Some(size) = opt_size {
+                    write!(out, "{}", size).unwrap();
+                }
                 t.mangle(out);
             }
             Type::Tuple(ref components) => {
@@ -132,7 +137,7 @@ impl Type {
                 qname.mangle(out);
             }
             Type::GenericParam(ref name) => {
-                write!(out, "{}{}", name.len(), name).unwrap();
+                write!(out, "G{}{}", name.len(), name).unwrap();
             }
             Type::Fn {
                 ref return_type,
@@ -148,7 +153,7 @@ impl Type {
                 }
 
                 if is_variadic {
-                    out.push('V');
+                    out.push('L');
                 }
 
                 abi.mangle(out);
@@ -180,7 +185,7 @@ impl Abi {
     pub fn mangle(&self, out: &mut String) {
         match *self {
             Abi::Rust => {},
-            Abi::C => out.push('C'),
+            Abi::C => out.push_str("Kc"),
         };
     }
 }
@@ -188,25 +193,25 @@ impl Abi {
 impl BasicType {
     pub fn mangle(&self, out: &mut String) {
         out.push(match *self {
-            BasicType::Bool => 'x',
-            BasicType::Char => 'x',
-            BasicType::Str => 'x',
-            BasicType::Unit => 'x',
-            BasicType::I8 => 'x',
-            BasicType::I16 => 'x',
-            BasicType::I32 => 'x',
+            BasicType::Bool => 'b',
+            BasicType::Char => 'c',
+            BasicType::Str => 'e',
+            BasicType::Unit => 'v',
+            BasicType::I8 => 'a',
+            BasicType::I16 => 's',
+            BasicType::I32 => 'l',
             BasicType::I64 => 'x',
-            BasicType::I128 => 'x',
-            BasicType::Isize => 'x',
-            BasicType::U8 => 'x',
-            BasicType::U16 => 'x',
-            BasicType::U32 => 'x',
-            BasicType::U64 => 'x',
-            BasicType::U128 => 'x',
-            BasicType::Usize => 'x',
-            BasicType::F32 => 'x',
-            BasicType::F64 => 'x',
-            BasicType::Never => 'x',
+            BasicType::I128 => 'n',
+            BasicType::Isize => 'i',
+            BasicType::U8 => 'h',
+            BasicType::U16 => 't',
+            BasicType::U32 => 'm',
+            BasicType::U64 => 'y',
+            BasicType::U128 => 'o',
+            BasicType::Usize => 'j',
+            BasicType::F32 => 'f',
+            BasicType::F64 => 'd',
+            BasicType::Never => 'z',
         });
     }
 }
