@@ -53,6 +53,8 @@ impl Demangler {
 
     fn demangle_name_prefix_with_params(&mut self) -> Result<(), String> {
 
+        if
+
         let start = self.out.len();
 
         while self.in[self.pos] != b'E' {

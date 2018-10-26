@@ -67,13 +67,13 @@ pub enum Type {
     Array(Option<usize>, Arc<Type>),
     Tuple(Vec<Arc<Type>>),
     Named(Arc<FullyQualifiedName>),
-    GenericParam(String),
+    GenericParam(String), // Must support hygiene?
     Fn {
-        return_type: Arc<Type>,
-        params: Vec<Arc<Type>>,
         is_unsafe: bool,
         is_variadic: bool,
         abi: Abi,
+        return_type: Arc<Type>,
+        params: Vec<Arc<Type>>,
     },
     Subst(Subst),
 }

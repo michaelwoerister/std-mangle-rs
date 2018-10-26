@@ -10,6 +10,7 @@ extern crate unicode_xid;
 pub mod ast;
 pub mod compress;
 pub mod mangle;
+pub mod parse;
 pub mod write;
 
 #[cfg(test)]
