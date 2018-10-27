@@ -89,11 +89,13 @@ impl FullyQualifiedName {
 impl GenericArgumentList {
 
     pub fn mangle(&self, out: &mut String) {
-        out.push('I');
-        for param in &self.params {
-            param.mangle(out);
+        if self.params.len() > 0 {
+            out.push('I');
+            for param in &self.params {
+                param.mangle(out);
+            }
+            out.push('E');
         }
-        out.push('E');
     }
 }
 
@@ -137,7 +139,7 @@ impl Type {
                 qname.mangle(out);
             }
             Type::GenericParam(ref name) => {
-                write!(out, "G{}{}", name.len(), name).unwrap();
+                write!(out, "G{}{}E", name.len(), name).unwrap();
             }
             Type::Fn {
                 ref return_type,
@@ -220,6 +222,6 @@ impl Symbol {
     pub fn mangle(&self, out: &mut String) {
         out.push_str("_R");
         self.name.mangle(out);
-        self.instantiating_crate.mangle(out);
+        // self.instantiating_crate.mangle(out);
     }
 }

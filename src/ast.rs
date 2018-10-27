@@ -117,7 +117,7 @@ pub enum BasicType {
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Symbol {
     pub name: Arc<FullyQualifiedName>,
-    pub instantiating_crate: Arc<NamePrefix>,
+    // pub instantiating_crate: Arc<NamePrefix>,
 }
 
 impl Ident {

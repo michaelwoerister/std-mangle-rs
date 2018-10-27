@@ -173,32 +173,50 @@ impl Arbitrary for Symbol {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         Symbol {
             name: Arbitrary::arbitrary(g),
-            instantiating_crate: Arc::new(NamePrefix::CrateId {
-                    name: gen_valid_ident(g),
-                    dis: "abc".to_string(), // TODO
-            }),
+            // instantiating_crate: Arc::new(NamePrefix::CrateId {
+            //         name: gen_valid_ident(g),
+            //         dis: "abc".to_string(), // TODO
+            // }),
         }
     }
 }
 
+const ASCII_ONLY: bool = false;
+const ASCII: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+const START_SET_START: usize = 10;
+
 fn gen_valid_ident<G: Gen>(g: &mut G) -> String {
-    let start = loop {
-        let c: char = Arbitrary::arbitrary(g);
-        if UnicodeXID::is_xid_start(c) {
-            break c
-        }
-    };
 
     let len = (1 + g.next_u32() % 20) as usize;
     let mut s = String::with_capacity(len);
-    s.push(start);
 
-    while s.len() < len {
-        let c: char = Arbitrary::arbitrary(g);
-        if UnicodeXID::is_xid_continue(c) {
-            s.push(c);
+    let ascii_only = ASCII_ONLY || (g.next_u32() % 5 != 0);
+    if ascii_only {
+        s.push(*g.choose(&ASCII[START_SET_START ..]).unwrap() as char);
+        assert!(!s.as_bytes()[0].is_ascii_digit());
+
+        for _ in 0 .. len {
+            s.push(*g.choose(ASCII).unwrap() as char);
+        }
+    } else {
+        let start = loop {
+            let c: char = Arbitrary::arbitrary(g);
+            if UnicodeXID::is_xid_start(c) {
+                break c
+            }
+        };
+
+        s.push(start);
+
+        while s.len() < len {
+            let c: char = Arbitrary::arbitrary(g);
+            if UnicodeXID::is_xid_continue(c) {
+                s.push(c);
+            }
         }
     }
 
     s
 }
+
+

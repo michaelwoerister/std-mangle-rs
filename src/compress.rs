@@ -39,7 +39,7 @@ pub fn compress(symbol: &Symbol) -> Symbol {
 
     Symbol {
         name: compress_fully_qualified_name(&symbol.name, &mut dict),
-        instantiating_crate: compress_name_prefix(&symbol.instantiating_crate, &mut dict),
+        // instantiating_crate: compress_name_prefix(&symbol.instantiating_crate, &mut dict),
     }
 }
 

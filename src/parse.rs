@@ -1,6 +1,7 @@
 
 use ast::*;
 use std::sync::Arc;
+use std::str;
 
 struct Parser<'input> {
     input: &'input [u8],
@@ -19,11 +20,14 @@ impl<'input> Parser<'input> {
         parser.parse_symbol_prefix()?;
 
         let path = parser.parse_fully_qualified_name()
-                         .map_err(|s| format!("Parsing error at pos {}: {}", parser.pos, s))?;
+                         .map_err(|s| format!("In {:?}: Parsing error at pos {}: {}",
+                            str::from_utf8(mangled).unwrap(),
+                            parser.pos,
+                            s))?;
 
         Ok(Symbol {
             name: path,
-            instantiating_crate: panic!(),
+            // instantiating_crate: panic!(),
         })
     }
 
@@ -76,7 +80,7 @@ impl<'input> Parser<'input> {
 
             self.pos += 1;
 
-            dis
+            dis + 1
         } else {
             0
         };
@@ -90,7 +94,7 @@ impl<'input> Parser<'input> {
 
     fn parse_decimal(&mut self) -> Result<usize, String> {
         if !self.cur().is_ascii_digit() {
-            return Err(format!("expected digit, found {}", self.cur()));
+            return Err(format!("expected digit, found {:?}", self.cur_char()));
         }
 
         let mut value = (self.cur() - b'0') as usize;
@@ -333,7 +337,12 @@ impl<'input> Parser<'input> {
             }
 
             b'G' => {
-                Type::GenericParam(self.parse_len_prefixed_ident()?.ident)
+                let ident = self.parse_len_prefixed_ident()?;
+                if self.cur() != b'E' {
+                    return Err(format!("While parsing generic parameter name: Expected 'E', found {:?}", self.cur_char()));
+                }
+                self.pos += 1;
+                Type::GenericParam(ident.ident)
             }
 
             b'N' => {
@@ -391,3 +400,32 @@ impl<'input> Parser<'input> {
 }
 
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    quickcheck! {
+        fn parsing(symbol: Symbol) -> bool {
+            let mut mangled = String::new();
+            symbol.mangle(&mut mangled);
+            match Parser::parse(mangled.as_bytes()) {
+                Ok(parsed) => {
+                    if symbol != parsed {
+                        panic!("expected: {:?}\n\
+                                actual:   {:?}\n\
+                                mangled:  {}\n",
+                                symbol,
+                                parsed,
+                                mangled)
+                    } else {
+                        true
+                    }
+                }
+                Err(e) => {
+                    panic!("{}", e)
+                }
+            }
+        }
+    }
+}
