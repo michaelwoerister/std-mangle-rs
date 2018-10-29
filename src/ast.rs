@@ -14,7 +14,7 @@ pub struct Ident {
     pub dis: u32,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub struct Subst(pub usize);
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]

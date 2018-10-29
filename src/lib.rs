@@ -9,6 +9,8 @@ extern crate unicode_xid;
 
 pub mod ast;
 pub mod compress;
+pub mod debug;
+pub mod decompress;
 pub mod mangle;
 pub mod parse;
 pub mod write;

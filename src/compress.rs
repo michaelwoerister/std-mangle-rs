@@ -3,7 +3,7 @@ use ast::*;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-struct Dictionary {
+pub(crate) struct Dictionary {
     prefixes: HashMap<Arc<NamePrefix>, Subst>,
     prefixes_with_params: HashMap<Arc<NamePrefixWithParams>, Subst>,
     qnames: HashMap<Arc<FullyQualifiedName>, Subst>,
@@ -31,16 +31,46 @@ impl Dictionary {
             counter: 0,
         }
     }
+
+    pub(crate) fn to_debug_dictionary(&self) -> Vec<(Subst, String)> {
+        let mut items = vec![];
+
+        items.extend(self.prefixes.iter().map(|(k, &v)| (v, format!("{:?}", k))));
+        items.extend(self.prefixes_with_params.iter().map(|(k, &v)| (v, format!("{:?}", k))));
+        items.extend(self.qnames.iter().map(|(k, &v)| (v, format!("{:?}", k))));
+        items.extend(self.types.iter().map(|(k, &v)| (v, format!("{:?}", k))));
+
+        items.sort_by_key(|&(k, _)| k);
+
+        items
+    }
 }
 
 pub fn compress(symbol: &Symbol) -> Symbol {
+    let (compressed, _) = compress_ext(symbol);
+    compressed
+}
 
+pub(crate) fn compress_ext(symbol: &Symbol) -> (Symbol, Dictionary) {
     let mut dict = Dictionary::new();
 
-    Symbol {
+    let compressed = Symbol {
         name: compress_fully_qualified_name(&symbol.name, &mut dict),
         // instantiating_crate: compress_name_prefix(&symbol.instantiating_crate, &mut dict),
+    };
+
+    if cfg!(debug_assertions) {
+        for type_key in dict.types.keys() {
+            match **type_key {
+                Type::BasicType(_) => {
+                    panic!("Found substituted basic type")
+                }
+                _ => {}
+            }
+        }
     }
+
+    (compressed, dict)
 }
 
 fn compress_name_prefix(name_prefix: &Arc<NamePrefix>, dict: &mut Dictionary) -> Arc<NamePrefix> {
@@ -93,13 +123,19 @@ fn compress_name_prefix(name_prefix: &Arc<NamePrefix>, dict: &mut Dictionary) ->
 fn compress_name_prefix_with_params(name_prefix: &Arc<NamePrefixWithParams>,
                                     dict: &mut Dictionary)
                                     -> Arc<NamePrefixWithParams> {
-
     if let Some(&subst) = dict.prefixes_with_params.get(name_prefix) {
         return Arc::new(NamePrefixWithParams::Subst(subst));
     }
 
-    let (compressed, new_dict_entry) = match **name_prefix {
+    match **name_prefix {
         NamePrefixWithParams::Node { ref prefix, ref args, } => {
+
+            if args.params.is_empty() {
+                if let Some(&subst) = dict.prefixes.get(prefix) {
+                    return Arc::new(NamePrefixWithParams::Subst(subst));
+                }
+            }
+
             let new_prefix = compress_name_prefix(prefix, dict);
 
             let new_args = compress_generic_argument_list(args, dict);
@@ -113,18 +149,19 @@ fn compress_name_prefix_with_params(name_prefix: &Arc<NamePrefixWithParams>,
                 })
             };
 
-            (compressed, !args.params.is_empty())
+            if !args.params.is_empty() {
+                // The substitution for this production is different from the
+                // nested NamePrefix (because of the additional argument list),
+                // so allocate a new one.
+                dict.alloc_subst(name_prefix, |d| &mut d.prefixes_with_params);
+            }
+
+            compressed
         }
         NamePrefixWithParams::Subst(_) => {
             unreachable!()
         }
-    };
-
-    if new_dict_entry {
-        dict.alloc_subst(name_prefix, |d| &mut d.prefixes_with_params);
     }
-
-    compressed
 }
 
 
@@ -181,6 +218,7 @@ fn compress_type(ty: &Arc<Type>, dict: &mut Dictionary) -> Arc<Type> {
     let compressed = match **ty {
         Type::GenericParam(_) |
         Type::BasicType(_) => {
+            // Return here. We never allocate a substitution for basic types.
             return ty.clone()
         },
 

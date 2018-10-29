@@ -3,7 +3,7 @@ use ast::*;
 use std::sync::Arc;
 use std::str;
 
-struct Parser<'input> {
+pub struct Parser<'input> {
     input: &'input [u8],
     pos: usize,
 }
@@ -126,7 +126,7 @@ impl<'input> Parser<'input> {
                 let subst = self.parse_subst()?;
                 Ok(Arc::new(FullyQualifiedName::Subst(subst)))
             }
-            other => {
+            _ => {
                 return Err(format!("Expected 'N' or 'S', found {:?}", self.cur_char()));
             }
         }
@@ -388,7 +388,7 @@ impl<'input> Parser<'input> {
 
         let abi = match self.cur() {
             b'c' => Abi::C,
-            other => {
+            _ => {
                 return Err(format!("Unknown ABI spec {:?}", self.cur_char()));
             }
         };
