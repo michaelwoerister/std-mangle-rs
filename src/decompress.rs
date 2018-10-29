@@ -290,7 +290,13 @@ impl Decompress {
             }
             Type::Subst(ref subst) => {
                 // Review with respect to Named variant / parsing? compression?
-                return self.types[subst].clone();
+                // return self.types[subst].clone();
+
+                return if let Some(t) = self.types.get(subst) {
+                    t.clone()
+                } else {
+                    Arc::new(Type::Named(self.qnames[subst].clone()))
+                };
             }
         };
 

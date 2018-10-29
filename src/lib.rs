@@ -13,7 +13,11 @@ pub mod debug;
 pub mod decompress;
 pub mod mangle;
 pub mod parse;
+pub mod pretty;
 pub mod write;
+
+#[cfg(test)]
+mod generated_tests;
 
 #[cfg(test)]
 mod qc;

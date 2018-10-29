@@ -181,42 +181,59 @@ impl Arbitrary for Symbol {
     }
 }
 
-const ASCII_ONLY: bool = false;
-const ASCII: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
-const START_SET_START: usize = 10;
+// const ASCII_ONLY: bool = false;
+// const ASCII: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+// const START_SET_START: usize = 10;
+
+// fn gen_valid_ident<G: Gen>(g: &mut G) -> String {
+
+//     let len = (1 + g.next_u32() % 20) as usize;
+//     let mut s = String::with_capacity(len);
+
+//     let ascii_only = ASCII_ONLY || (g.next_u32() % 5 != 0);
+//     if ascii_only {
+//         s.push(*g.choose(&ASCII[START_SET_START ..]).unwrap() as char);
+//         assert!(!s.as_bytes()[0].is_ascii_digit());
+
+//         for _ in 0 .. len {
+//             s.push(*g.choose(ASCII).unwrap() as char);
+//         }
+//     } else {
+//         let start = loop {
+//             let c: char = Arbitrary::arbitrary(g);
+//             if UnicodeXID::is_xid_start(c) {
+//                 break c
+//             }
+//         };
+
+//         s.push(start);
+
+//         while s.len() < len {
+//             let c: char = Arbitrary::arbitrary(g);
+//             if UnicodeXID::is_xid_continue(c) {
+//                 s.push(c);
+//             }
+//         }
+//     }
+
+//     s
+// }
+
+const VALID_IDENTS: &[&str] = &[
+    "foo",
+    "_foo",
+    "f00",
+    "_0",
+    "__1",
+    "foo_",
+    "E",
+    "N",
+    "X",
+    "S",
+];
 
 fn gen_valid_ident<G: Gen>(g: &mut G) -> String {
-
-    let len = (1 + g.next_u32() % 20) as usize;
-    let mut s = String::with_capacity(len);
-
-    let ascii_only = ASCII_ONLY || (g.next_u32() % 5 != 0);
-    if ascii_only {
-        s.push(*g.choose(&ASCII[START_SET_START ..]).unwrap() as char);
-        assert!(!s.as_bytes()[0].is_ascii_digit());
-
-        for _ in 0 .. len {
-            s.push(*g.choose(ASCII).unwrap() as char);
-        }
-    } else {
-        let start = loop {
-            let c: char = Arbitrary::arbitrary(g);
-            if UnicodeXID::is_xid_start(c) {
-                break c
-            }
-        };
-
-        s.push(start);
-
-        while s.len() < len {
-            let c: char = Arbitrary::arbitrary(g);
-            if UnicodeXID::is_xid_continue(c) {
-                s.push(c);
-            }
-        }
-    }
-
-    s
+    g.choose(VALID_IDENTS).unwrap().to_string()
 }
 
 

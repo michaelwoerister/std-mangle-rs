@@ -223,6 +223,10 @@ fn compress_type(ty: &Arc<Type>, dict: &mut Dictionary) -> Arc<Type> {
         },
 
         Type::Named(ref name) => {
+            if let Some(&subst) = dict.qnames.get(name) {
+                return Arc::new(Type::Subst(subst));
+            }
+
             // Always return here so we don't add something to the dictionary.
             return compress_dedup(ty, name, dict, compress_fully_qualified_name, Type::Named)
         }

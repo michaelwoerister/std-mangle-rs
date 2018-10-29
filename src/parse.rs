@@ -428,4 +428,30 @@ mod tests {
             }
         }
     }
+
+    quickcheck! {
+        fn parsing_compressed(symbol: Symbol) -> bool {
+            let mut mangled = String::new();
+            let compressed = ::compress::compress(&symbol);
+            compressed.mangle(&mut mangled);
+            match Parser::parse(mangled.as_bytes()) {
+                Ok(parsed) => {
+                    if parsed != compressed {
+                        panic!("Re-parsed compressed symbol differs from original
+                                expected: {:?}\n\
+                                actual:   {:?}\n\
+                                mangled:  {}\n",
+                                compressed,
+                                parsed,
+                                mangled)
+                    } else {
+                        true
+                    }
+                }
+                Err(e) => {
+                    panic!("{}", e)
+                }
+            }
+        }
+    }
 }
