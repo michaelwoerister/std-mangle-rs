@@ -10,10 +10,11 @@ use std::cmp;
 
 impl Arbitrary for IdentTag {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        match g.next_u32() % 3 {
-            0 => IdentTag::ValueNs,
-            1 => IdentTag::TypeNs,
-            2 => IdentTag::Closure,
+        match g.next_u32() % 4 {
+            0 => IdentTag::Function,
+            1 => IdentTag::Static,
+            2 => IdentTag::TypeNs,
+            3 => IdentTag::Closure,
             _ => unreachable!(),
         }
     }

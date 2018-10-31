@@ -57,9 +57,13 @@ impl<'input> Parser<'input> {
         self.pos += len;
 
         let tag = match self.cur() {
-            b'V' => {
+            b'F' => {
                 self.pos += 1;
-                IdentTag::ValueNs
+                IdentTag::Function
+            }
+            b'S' => {
+                self.pos += 1;
+                IdentTag::Static
             }
             b'C' => {
                 self.pos += 1;
@@ -72,7 +76,12 @@ impl<'input> Parser<'input> {
 
         let dis = if self.cur() == b's' {
             self.pos += 1;
-            let dis = self.parse_decimal()?;
+
+            let dis = if self.cur() == b'_' {
+                1
+            } else {
+                self.parse_decimal()? + 2
+            };
 
             if self.cur() != b'_' {
                 return Err(format!("expected '_', found '{}'", self.cur() as char));
@@ -80,7 +89,7 @@ impl<'input> Parser<'input> {
 
             self.pos += 1;
 
-            dis + 1
+            dis
         } else {
             0
         };

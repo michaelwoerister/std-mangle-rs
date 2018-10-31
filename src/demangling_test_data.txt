@@ -42,127 +42,146 @@ _RN7std_xxx3FooIzEE std[xxx]::Foo<!>
 # Demangle str
 _RN7std_xxx3FooIeEE std[xxx]::Foo<str>
 
+
+
 ## Statics
 
 # Static at crate level
-_RN16mycrate_abcd123f3FOOVE mycrate[abcd123f]::FOO
+_RN16mycrate_abcd123f3FOOSE mycrate[abcd123f]::FOO
 
 # Static in module
-_RN16mycrate_abcd123f3bar3FOOVE mycrate[abcd123f]::bar::FOO
+_RN16mycrate_abcd123f3bar3FOOSE mycrate[abcd123f]::bar::FOO
 
 # Static in function
-_RN16mycrate_abcd123f3fooV4QUUXVE mycrate[abcd123f]::foo::QUUX
+_RN16mycrate_abcd123f3fooF4QUUXSE mycrate[abcd123f]::foo::QUUX
 
-# Static with mixed module/function path
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+# Static with mixed module/function/static path
+_RN16mycrate_abcd123f3bar3fooF3bazS4quuxFE mycrate[abcd123f]::bar::foo::baz::quux
 
 # Static with unicode name
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+...
 
 # Static with unicode module in path
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+...
 
 # Static with disambiguated name
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+_RN16mycrate_abcd123f3foo3BARSs_E mycrate[abcd123f]::foo::BAR'2
 
 # Static with disambiguated module in path
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
-
-# Static with generic function in path
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+_RN16mycrate_abcd123f3foos0_3BARSE mycrate[abcd123f]::foo'3::BAR
 
 # Static with closure in path
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+_RN16mycrate_abcd123f3fooF1_C4QUUXSE mycrate[abcd123f]::foo::{closure}'1::QUUX
+
+# Static with trait impl in path
+_RNXiN16mycrate_abcd123f9SomeTraitE4quuxF3FOOSE <isize as mycrate[abcd123f]::SomeTrait>::quux::FOO
 
 # Static with specialized trait impl in path
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+...
 
 
 ## Non-generic functions
 
 # Free-standing function at crate level
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::quux()
+_RN16mycrate_abcd123f4quuxFE mycrate[abcd123f]::quux
 
 # Free-standing function in module
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::quux()
+_RN16mycrate_abcd123f3foo4quuxFE mycrate[abcd123f]::foo::quux
 
 # Free-standing function in function
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::quux()
+_RN16mycrate_abcd123f3fooF3barFE mycrate[abcd123f]::foo::bar
 
-# Free-standing function with mixed module/function path
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+# Free-standing function with mixed module/function/Static path
+_RN16mycrate_abcd123f3bar3fooF3BARS4quuxFE mycrate[abcd123f]::bar::foo::BAR::quux
 
 # Free-standing function with unicode name
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+...
 
 # Free-standing function with unicode module in path
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+...
 
 # Free-standing function with disambiguated name
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+_RN16mycrate_abcd123f3foo4quuxFs_E mycrate[abcd123f]::foo::quux'2
 
 # Free-standing function with disambiguated module in path
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+_RN16mycrate_abcd123f3foos0_4quuxFE mycrate[abcd123f]::foo'3::quux
 
 # Free-standing function with generic function in path
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+_RN16mycrate_abcd123f3barIG1TEE3fooFE mycrate[abcd123f]::bar<T>::foo
 
 # Free-standing function with closure in path
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+_RN16mycrate_abcd123f3foo1_C3barFE mycrate[abcd123f]::foo::{closure}'1::bar
+
+# Free-standing function with trait impl in path
+...
 
 # Free-standing function with specialized trait impl in path
-
+_RNXmN8std_12345DebugE4quuxFE <u32 as std[1234]::Debug>::quux
 
 
 ## Generic functions
 
 # Generic function with basic type argument
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+_RN16mycrate_abcd123f3barFImEE mycrate[abcd123f]::bar<u32>
 
 # Generic function with named type argument
-# _RN16mycrate_abcd123f3foo4quuxVE mycrate[abcd123f]::bar()::foo::baz()::quux()
+_RN16mycrate_abcd123f5closeFIN8std_12342fs4FileEEE mycrate[abcd123f]::close<std[1234]::fs::File>
 
 # Generic function with tuple type argument
+_RN16mycrate_abcd123f3bazFITccEEE mycrate[abcd123f]::baz<(char,char)>
 
 # Generic function with shared reference type argument
+_RN16mycrate_abcd123f3bazFIReEE mycrate[abcd123f]::baz<&str>
 
 # Generic function with mutable reference type argument
+_RN16mycrate_abcd123f3bazFIQeEE mycrate[abcd123f]::baz<&mut str>
 
 # Generic function with const pointer type argument
+_RN16mycrate_abcd123f3bazFIPaEE mycrate[abcd123f]::baz<*const i8>
 
 # Generic function with mut pointer type argument
+_RN16mycrate_abcd123f3bazFIOhEE mycrate[abcd123f]::baz<*mut u8>
 
 # Generic function with function type argument
+_RN16mycrate_abcd123f3bazFIFcmEEE mycrate[abcd123f]::baz<fn(u32) -> char>
 
 # Generic function with unsized array type argument
+_RN16mycrate_abcd123f3bazFIAtEE mycrate[abcd123f]::baz<[u16]>
 
 # Generic function with sized array type argument
+_RN16mycrate_abcd123f3bazFIA777sEE mycrate[abcd123f]::baz<[i16; 777]>
+
+# Generic function with named type parameter
+_RN16mycrate_abcd123f3bazFIG1TEEE mycrate[abcd123f]::baz<T>
 
 # Generic function with unicode named type argument
+...
 
 # Generic function with closure type argument
+_RN16mycrate_abcd123f3bazFIN16mycrate_abcd123f3foo1_Cs0_EEE mycrate[abcd123f]::baz<mycrate[abcd123f]::foo::{closure}'3>
 
 # Generic function with disambiguated named type arguments
+_RN16mycrate_abcd123f3bazFIN16mycrate_abcd123f3Foos_EEE mycrate[abcd123f]::baz<mycrate[abcd123f]::Foo'2>
 
 # Generic function with named type argument defined in simple trait impl
-# _RN8std_23453mem8align_ofINX16mycrate_abcd123f9SomeTraitIjEEE std[2345]::mem::align_of<<usize as SomeTrait>::foo::Bar>()
+_RN8std_23453mem8align_ofFINXjN16mycrate_abcd123f9SomeTraitE3fooF3BarEEE std[2345]::mem::align_of<<usize as mycrate[abcd123f]::SomeTrait>::foo::Bar>
 
 # Generic function with named type argument defined in specialized trait impl
-
-
-
+...
 
 ## Inherent methods
 
 # Inherent non-generic method
+_RN8std_12342fs4File5closeFE std[1234]::fs::File::close
 
 # Inherent method with generic impl
+_RN8std_12343vec3VecIcE4pushFE std[1234]::vec::Vec<char>::push
 
 # Generic inherent method
+_RN8std_12346string6String6retainFIN7xxx_yyy9predicateFEEE std[1234]::string::String::retain<xxx[yyy]::predicate>
 
 # Generic inherent method with generic impl
-
-# Generic inherent method with generic impl
+_RN8std_12343vec3VecIsE6retainFIN7xxx_yyy9predicateFEEE std[1234]::vec::Vec<i16>::retain<xxx[yyy]::predicate>
 
 # Inherent method with basic self type
 
@@ -183,7 +202,7 @@ _RN16mycrate_abcd123f3fooV4QUUXVE mycrate[abcd123f]::foo::QUUX
 ### Trait methods
 
 # Non-generic trait method
-####_R X 16mycrate_abcd123f 9SomeTrait IjE E <usize as SomeTrait>::foo()
+...
 
 
 ### Items in specialized trait impls
@@ -192,13 +211,17 @@ _RN16mycrate_abcd123f3fooV4QUUXVE mycrate[abcd123f]::foo::QUUX
 ## Closures
 
 # Closure in free-standing function
+_RN7std_xxx3fooF1_Cs0_E std[xxx]::foo::{closure}'3
 
 # Closure in closure
+_RN7std_xxx3fooF1_Cs0_1_CE std[xxx]::foo::{closure}'3::{closure}'1
 
 # Closure in inherent method
+...
 
 # Closure in trait method
-
+_RNXlN7foo_xxx3BarIxEE4quuxFIcE1_Cs_E <i32 as foo[xxx]::Bar<i64>>::quux<char>::{closure}'2
 
 ## Shims
+
 

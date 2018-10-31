@@ -20,11 +20,14 @@ fn main() {
     for line in test_case_definitions.lines().map(|l| l.unwrap()) {
         if line.starts_with("_R") && prev_line.starts_with("#") {
 
-            let parts: Vec<_> = line.split(' ').collect();
-            let mangled = parts[0].to_string();
-            let demangled = parts[1].to_string();
+            let end_of_mangled_name = line.find(' ').unwrap();
+            let mangled = &line[..end_of_mangled_name];
+            let demangled = line[end_of_mangled_name + 1 ..].trim();
 
-            let title = prev_line[1 .. ].trim().replace(" ", "_");
+            let title = prev_line[1 .. ].trim().replace(" ", "_")
+                                               .replace("/", "_")
+                                               .replace(",", "_")
+                                               .replace("-", "_");
 
             writeln!(output, "#[test] #[allow(non_snake_case)] fn {}() {{", title);
             writeln!(output, "  let demangled_expected = \"{}\";", demangled);

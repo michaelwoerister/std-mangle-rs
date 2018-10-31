@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum IdentTag {
-    ValueNs,
+    Function,
+    Static,
     TypeNs,
     Closure,
 }
@@ -127,18 +128,6 @@ impl Ident {
             tag,
             dis,
         }
-    }
-
-    pub fn ty(ident: &str) -> Ident {
-        Ident::new(ident, IdentTag::TypeNs, 0)
-    }
-
-    pub fn val(ident: &str) -> Ident {
-        Ident::new(ident, IdentTag::ValueNs, 0)
-    }
-
-    pub fn closure(ident: &str) -> Ident {
-        Ident::new(ident, IdentTag::Closure, 0)
     }
 }
 

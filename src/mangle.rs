@@ -5,7 +5,8 @@ impl IdentTag {
     pub fn mangle(&self, out: &mut String) {
         match *self {
             IdentTag::TypeNs => {},
-            IdentTag::ValueNs => out.push('V'),
+            IdentTag::Function => out.push('F'),
+            IdentTag::Static => out.push('S'),
             IdentTag::Closure => out.push('C'),
         }
     }
@@ -18,8 +19,17 @@ impl Ident {
 
         self.tag.mangle(out);
 
-        if self.dis != 0 {
-            write!(out, "s{}_", self.dis - 1).unwrap();
+        match self.dis {
+            0 => {
+                // Don't print anything
+            }
+            1 => {
+                // Don't print an index
+                out.push_str("s_");
+            }
+            index => {
+                write!(out, "s{}_", self.dis - 2).unwrap();
+            }
         }
     }
 }

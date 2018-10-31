@@ -6,8 +6,9 @@ use std::fmt::Write;
 impl IdentTag {
     pub fn pretty_print(&self, out: &mut String) {
         match *self {
-            IdentTag::TypeNs => {},
-            IdentTag::ValueNs => {},
+            IdentTag::TypeNs |
+            IdentTag::Static |
+            IdentTag::Function |
             IdentTag::Closure => {},
         };
     }
@@ -15,12 +16,19 @@ impl IdentTag {
 
 impl Ident {
     pub fn pretty_print(&self, out: &mut String) {
-        out.push_str(&self.ident);
+        match self.tag {
+            IdentTag::TypeNs |
+            IdentTag::Static |
+            IdentTag::Function => {
+                out.push_str(&self.ident);
 
-        self.tag.pretty_print(out);
-
-        if self.dis != 0 {
-            write!(out, "'{}", self.dis + 1).unwrap();
+                if self.dis != 0 {
+                    write!(out, "'{}", self.dis + 1).unwrap();
+                }
+            }
+            IdentTag::Closure => {
+                write!(out, "{{closure}}'{}", self.dis + 1).unwrap();
+            }
         }
     }
 }
