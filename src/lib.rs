@@ -14,7 +14,7 @@ pub mod decompress;
 pub mod mangle;
 pub mod parse;
 pub mod pretty;
-pub mod write;
+pub mod direct_demangle;
 
 #[cfg(test)]
 mod generated_tests;

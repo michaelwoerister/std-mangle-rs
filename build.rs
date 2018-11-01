@@ -14,31 +14,63 @@ fn main() {
 
     let test_case_definitions = BufReader::new(File::open(test_case_definitions_path).unwrap());
 
-
     let mut prev_line = String::new();
 
     for line in test_case_definitions.lines().map(|l| l.unwrap()) {
         if line.starts_with("_R") && prev_line.starts_with("#") {
-
-            let end_of_mangled_name = line.find(' ').unwrap();
-            let mangled = &line[..end_of_mangled_name];
-            let demangled = line[end_of_mangled_name + 1 ..].trim();
-
-            let title = prev_line[1 .. ].trim().replace(" ", "_")
-                                               .replace("/", "_")
-                                               .replace(",", "_")
-                                               .replace("-", "_");
-
-            writeln!(output, "#[test] #[allow(non_snake_case)] fn {}() {{", title);
-            writeln!(output, "  let demangled_expected = \"{}\";", demangled);
-            writeln!(output, "  let ast = ::parse::Parser::parse(b\"{}\").unwrap();", mangled);
-            writeln!(output, "  let decompressed = ::decompress::Decompress::decompress(&ast);");
-            writeln!(output, "  let mut demangled_actual = String::new();");
-            writeln!(output, "  decompressed.pretty_print(&mut demangled_actual);");
-            writeln!(output, "  assert_eq!(demangled_expected, demangled_actual);");
-            writeln!(output, "}}");
+            emit_test_case_ast(&line, &prev_line, &mut output);
+            emit_test_case_direct(&line, &prev_line, &mut output);
         }
 
         prev_line = line;
+    }
+}
+
+fn emit_test_case_ast(spec_line: &str,
+                      title_line: &str,
+                      output: &mut impl Write) {
+    if spec_line.starts_with("_R") && title_line.starts_with("#") {
+
+        let end_of_mangled_name = spec_line.find(' ').unwrap();
+        let mangled = &spec_line[..end_of_mangled_name];
+        let demangled = spec_line[end_of_mangled_name + 1 ..].trim();
+
+        let title = title_line[1 .. ].trim().replace(" ", "_")
+                                            .replace("/", "_")
+                                            .replace(",", "_")
+                                            .replace("-", "_") + "_ast";
+
+        writeln!(output, "#[test] #[allow(non_snake_case)] fn {}() {{", title).unwrap();
+        writeln!(output, "  let demangled_expected = r#\"{}\"#;", demangled).unwrap();
+        writeln!(output, "  let ast = ::parse::Parser::parse(br#\"{}\"#).unwrap();", mangled).unwrap();
+        writeln!(output, "  let decompressed = ::decompress::Decompress::decompress(&ast);").unwrap();
+        writeln!(output, "  let mut demangled_actual = String::new();").unwrap();
+        writeln!(output, "  decompressed.pretty_print(&mut demangled_actual);").unwrap();
+        writeln!(output, "  assert_eq!(demangled_expected, demangled_actual);").unwrap();
+        writeln!(output, "}}").unwrap();
+    }
+}
+
+
+fn emit_test_case_direct(spec_line: &str,
+                         title_line: &str,
+                         output: &mut impl Write) {
+    if spec_line.starts_with("_R") && title_line.starts_with("#") {
+
+        let end_of_mangled_name = spec_line.find(' ').unwrap();
+        let mangled = &spec_line[..end_of_mangled_name];
+        let demangled = spec_line[end_of_mangled_name + 1 ..].trim();
+
+        let title = title_line[1 .. ].trim().replace(" ", "_")
+                                            .replace("/", "_")
+                                            .replace(",", "_")
+                                            .replace("-", "_") + "_direct";
+
+        writeln!(output, "#[test] #[allow(non_snake_case)] fn {}() {{", title).unwrap();
+        writeln!(output, "  let demangled_expected = r#\"{}\"#;", demangled).unwrap();
+        writeln!(output, "  let demangled_expected = Ok(demangled_expected.to_string());").unwrap();
+        writeln!(output, "  let demangled_actual = ::direct_demangle::Demangler::demangle(b\"{}\");", mangled).unwrap();
+        writeln!(output, "  assert_eq!(demangled_expected, demangled_actual);").unwrap();
+        writeln!(output, "}}").unwrap();
     }
 }

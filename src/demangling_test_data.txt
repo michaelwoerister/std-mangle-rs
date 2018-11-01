@@ -36,11 +36,13 @@ _RN7std_xxx3FooIbEE std[xxx]::Foo<bool>
 # Demangle char
 _RN7std_xxx3FooIcEE std[xxx]::Foo<char>
 # Demangle unit
-_RN7std_xxx3FooIvEE std[xxx]::Foo<()>
+_RN7std_xxx3FooIuEE std[xxx]::Foo<()>
 # Demangle never
 _RN7std_xxx3FooIzEE std[xxx]::Foo<!>
 # Demangle str
 _RN7std_xxx3FooIeEE std[xxx]::Foo<str>
+# Demangle ellipsis
+_RN7std_xxx3FooIvEE std[xxx]::Foo<...>
 
 
 
@@ -106,9 +108,6 @@ _RN16mycrate_abcd123f3foo4quuxFs_E mycrate[abcd123f]::foo::quux'2
 # Free-standing function with disambiguated module in path
 _RN16mycrate_abcd123f3foos0_4quuxFE mycrate[abcd123f]::foo'3::quux
 
-# Free-standing function with generic function in path
-_RN16mycrate_abcd123f3barIG1TEE3fooFE mycrate[abcd123f]::bar<T>::foo
-
 # Free-standing function with closure in path
 _RN16mycrate_abcd123f3foo1_C3barFE mycrate[abcd123f]::foo::{closure}'1::bar
 
@@ -143,7 +142,7 @@ _RN16mycrate_abcd123f3bazFIPaEE mycrate[abcd123f]::baz<*const i8>
 _RN16mycrate_abcd123f3bazFIOhEE mycrate[abcd123f]::baz<*mut u8>
 
 # Generic function with function type argument
-_RN16mycrate_abcd123f3bazFIFcmEEE mycrate[abcd123f]::baz<fn(u32) -> char>
+_RN16mycrate_abcd123f3bazFIFmJcEEE mycrate[abcd123f]::baz<fn(u32) -> char>
 
 # Generic function with unsized array type argument
 _RN16mycrate_abcd123f3bazFIAtEE mycrate[abcd123f]::baz<[u16]>
@@ -172,32 +171,37 @@ _RN8std_23453mem8align_ofFINXjN16mycrate_abcd123f9SomeTraitE3fooF3BarEEE std[234
 ## Inherent methods
 
 # Inherent non-generic method
-_RN8std_12342fs4File5closeFE std[1234]::fs::File::close
+_RNMN8std_12342fs4FileE5closeFE std[1234]::fs::File::close
 
 # Inherent method with generic impl
-_RN8std_12343vec3VecIcE4pushFE std[1234]::vec::Vec<char>::push
+_RNMN8std_12343vec3VecIcEE4pushFE std[1234]::vec::Vec<char>::push
 
 # Generic inherent method
-_RN8std_12346string6String6retainFIN7xxx_yyy9predicateFEEE std[1234]::string::String::retain<xxx[yyy]::predicate>
+_RNMN8std_12346string6StringE6retainFIN7xxx_yyy9predicateFEEE std[1234]::string::String::retain<xxx[yyy]::predicate>
 
 # Generic inherent method with generic impl
-_RN8std_12343vec3VecIsE6retainFIN7xxx_yyy9predicateFEEE std[1234]::vec::Vec<i16>::retain<xxx[yyy]::predicate>
+_RNMN8std_12343vec3VecIsEE6retainFIN7xxx_yyy9predicateFEEE std[1234]::vec::Vec<i16>::retain<xxx[yyy]::predicate>
 
 # Inherent method with basic self type
+_RNMi5to_leFE isize::to_le
 
 # Inherent method with tuple self type
+_RNMTcccE3fooFE (char,char,char)::foo
 
 # Inherent method with array self type
+_RNMAs4quuxFE [i16]::quux
 
 # Inherent method with function self type
+_RNMFUKcE4quuxFE unsafe extern "C" fn()::quux
 
 # Inherent method with reference self type
+_RNMRa4quuxFE &i8::quux
 
 # Inherent method with pointer self type
+_RNMPu4quuxFE *const ()::quux
 
 # Inherent method with disambiguated named self type
-
-
+_RNMN7std_xxx3Foos_E4quuxFE std[xxx]::Foo'2::quux
 
 ### Trait methods
 
@@ -220,8 +224,13 @@ _RN7std_xxx3fooF1_Cs0_1_CE std[xxx]::foo::{closure}'3::{closure}'1
 ...
 
 # Closure in trait method
-_RNXlN7foo_xxx3BarIxEE4quuxFIcE1_Cs_E <i32 as foo[xxx]::Bar<i64>>::quux<char>::{closure}'2
+_RNXlN7foo_xxx3BarIxEE4quuxF1_Cs_IcEE <i32 as foo[xxx]::Bar<i64>>::quux::{closure}'2<char>
 
 ## Shims
 
 
+## Compression
+
+# Compressed basic type crate root
+
+# Compressed named type crate root

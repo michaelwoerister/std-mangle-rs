@@ -4,7 +4,7 @@ use ast::*;
 use std::fmt::Write;
 
 impl IdentTag {
-    pub fn pretty_print(&self, out: &mut String) {
+    pub fn pretty_print(&self, _out: &mut String) {
         match *self {
             IdentTag::TypeNs |
             IdentTag::Static |
@@ -53,6 +53,9 @@ impl NamePrefix {
                 impled_trait.pretty_print(out);
                 out.push('>');
             }
+            NamePrefix::InherentImpl { ref self_type } => {
+                self_type.pretty_print(out);
+            }
             NamePrefix::Node { ref prefix, ref ident } => {
                 prefix.pretty_print(out);
                 out.push_str("::");
@@ -65,25 +68,12 @@ impl NamePrefix {
     }
 }
 
-impl NamePrefixWithParams {
-    pub fn pretty_print(&self, out: &mut String) {
-        match *self {
-            NamePrefixWithParams::Node { ref prefix, ref args } => {
-                prefix.pretty_print(out);
-                args.pretty_print(out);
-            }
-            NamePrefixWithParams::Subst(subst) => {
-                subst.pretty_print(out);
-            }
-        }
-    }
-}
-
 impl FullyQualifiedName {
     pub fn pretty_print(&self, out: &mut String) {
         match *self {
-            FullyQualifiedName::Name { ref name } => {
+            FullyQualifiedName::Name { ref name, ref args } => {
                 name.pretty_print(out);
+                args.pretty_print(out);
             }
             FullyQualifiedName::Subst(subst) => {
                 subst.pretty_print(out);
@@ -158,7 +148,6 @@ impl Type {
                 ref return_type,
                 ref params,
                 is_unsafe,
-                is_variadic,
                 abi,
             } => {
                 if is_unsafe {
@@ -173,22 +162,19 @@ impl Type {
 
                 out.push_str("fn(");
 
-                if params.len() > 0 || is_variadic {
+                if params.len() > 0 {
                     for param in params {
                         param.pretty_print(out);
                         out.push(',');
                     }
 
-                    if is_variadic {
-                        out.push_str("...");
-                    } else {
-                        out.pop();
-                    }
+                    out.pop();
                 }
 
                 out.push(')');
 
-                if **return_type != Type::BasicType(BasicType::Unit) {
+
+                if let &Some(ref return_type) = return_type {
                     out.push_str(" -> ");
                     return_type.pretty_print(out);
                 }
@@ -233,6 +219,7 @@ impl BasicType {
             BasicType::F32 => "f32",
             BasicType::F64 => "f64",
             BasicType::Never => "!",
+            BasicType::Ellipsis => "...",
         });
     }
 }

@@ -28,7 +28,7 @@ impl Ident {
                 out.push_str("s_");
             }
             index => {
-                write!(out, "s{}_", self.dis - 2).unwrap();
+                write!(out, "s{}_", index - 2).unwrap();
             }
         }
     }
@@ -56,6 +56,10 @@ impl NamePrefix {
                 self_type.mangle(out);
                 impled_trait.mangle(out);
             }
+            NamePrefix::InherentImpl { ref self_type } => {
+                out.push('M');
+                self_type.mangle(out);
+            }
             NamePrefix::Node { ref prefix, ref ident } => {
                 prefix.mangle(out);
                 ident.mangle(out);
@@ -67,26 +71,13 @@ impl NamePrefix {
     }
 }
 
-impl NamePrefixWithParams {
-    pub fn mangle(&self, out: &mut String) {
-        match *self {
-            NamePrefixWithParams::Node { ref prefix, ref args } => {
-                prefix.mangle(out);
-                args.mangle(out);
-            }
-            NamePrefixWithParams::Subst(subst) => {
-                subst.mangle(out);
-            }
-        }
-    }
-}
-
 impl FullyQualifiedName {
     pub fn mangle(&self, out: &mut String) {
         match *self {
-            FullyQualifiedName::Name { ref name } => {
+            FullyQualifiedName::Name { ref name, ref args } => {
                 out.push('N');
                 name.mangle(out);
+                args.mangle(out);
                 out.push('E');
             }
             FullyQualifiedName::Subst(subst) => {
@@ -155,7 +146,6 @@ impl Type {
                 ref return_type,
                 ref params,
                 is_unsafe,
-                is_variadic,
                 abi,
             } => {
                 out.push('F');
@@ -164,16 +154,15 @@ impl Type {
                     out.push('U');
                 }
 
-                if is_variadic {
-                    out.push('L');
-                }
-
                 abi.mangle(out);
-
-                return_type.mangle(out);
 
                 for param in params {
                     param.mangle(out);
+                }
+
+                if let &Some(ref return_type) = return_type {
+                    out.push('J');
+                    return_type.mangle(out);
                 }
 
                 out.push('E');
@@ -205,24 +194,25 @@ impl Abi {
 impl BasicType {
     pub fn mangle(&self, out: &mut String) {
         out.push(match *self {
+            BasicType::I8 => 'a',
             BasicType::Bool => 'b',
             BasicType::Char => 'c',
-            BasicType::Str => 'e',
-            BasicType::Unit => 'v',
-            BasicType::I8 => 'a',
-            BasicType::I16 => 's',
-            BasicType::I32 => 'l',
-            BasicType::I64 => 'x',
-            BasicType::I128 => 'n',
-            BasicType::Isize => 'i',
-            BasicType::U8 => 'h',
-            BasicType::U16 => 't',
-            BasicType::U32 => 'm',
-            BasicType::U64 => 'y',
-            BasicType::U128 => 'o',
-            BasicType::Usize => 'j',
-            BasicType::F32 => 'f',
             BasicType::F64 => 'd',
+            BasicType::Str => 'e',
+            BasicType::F32 => 'f',
+            BasicType::U8 => 'h',
+            BasicType::Isize => 'i',
+            BasicType::Usize => 'j',
+            BasicType::I32 => 'l',
+            BasicType::U32 => 'm',
+            BasicType::I128 => 'n',
+            BasicType::U128 => 'o',
+            BasicType::I16 => 's',
+            BasicType::U16 => 't',
+            BasicType::Unit => 'u',
+            BasicType::Ellipsis => 'v',
+            BasicType::I64 => 'x',
+            BasicType::U64 => 'y',
             BasicType::Never => 'z',
         });
     }

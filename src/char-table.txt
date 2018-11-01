@@ -18,8 +18,8 @@ q
 r
 s - i16
 t - u16
-u
-v - ()
+u - ()
+v - ...
 w
 x - i64
 y - u64
@@ -35,10 +35,10 @@ F - function type
 G - generic param name
 H
 I - start of generic param list
-J
+J - return type marker for function types
 K - abi marker for fn types
-L - variadic tag for fn types
-M
+L
+M - marker for inherent-impl-rooted paths
 N - named entity
 O - *mut
 P - *const
@@ -49,7 +49,7 @@ T - tuple type
 U - unsafe tag for fn types
 V - value namespace tag
 W
-X - marker for impl-rooted paths
+X - marker for trait-impl-rooted paths
 Y
 Z
 

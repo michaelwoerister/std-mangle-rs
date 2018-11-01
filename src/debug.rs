@@ -9,7 +9,7 @@ pub fn print_dictionary<I>(entries: I)
     items.sort_by_key(|&(s, _)| s);
 
     for (k, v) in items {
-        println!("{:6>} {}", k, v);
+        println!("{:6>} {}", k.0, v);
     }
 }
 

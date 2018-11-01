@@ -29,26 +29,21 @@ pub enum NamePrefix {
         impled_trait: Arc<FullyQualifiedName>,
         // TODO: bounds
     },
+    InherentImpl {
+        self_type: Arc<Type>,
+    },
     Node {
-        prefix: Arc<NamePrefixWithParams>,
+        prefix: Arc<NamePrefix>,
         ident: Ident,
     },
     Subst(Subst)
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-pub enum NamePrefixWithParams {
-    Node {
-        prefix: Arc<NamePrefix>,
-        args: GenericArgumentList,
-    },
-    Subst(Subst),
-}
-
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum FullyQualifiedName {
     Name {
-        name: Arc<NamePrefixWithParams>,
+        name: Arc<NamePrefix>,
+        args: GenericArgumentList,
     },
     Subst(Subst),
 }
@@ -71,10 +66,9 @@ pub enum Type {
     GenericParam(String), // Must support hygiene?
     Fn {
         is_unsafe: bool,
-        is_variadic: bool,
         abi: Abi,
-        return_type: Arc<Type>,
         params: Vec<Arc<Type>>,
+        return_type: Option<Arc<Type>>,
     },
     Subst(Subst),
 }
@@ -113,6 +107,7 @@ pub enum BasicType {
     F32,
     F64,
     Never,
+    Ellipsis,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
@@ -136,5 +131,12 @@ impl GenericArgumentList {
         GenericArgumentList {
             params: vec![],
         }
+    }
+
+    pub fn ptr_eq(&self, other: &GenericArgumentList) -> bool {
+        assert_eq!(self.params.len(), other.params.len());
+
+        self.params.iter().zip(other.params.iter())
+            .all(|(a, b)| Arc::ptr_eq(a, b))
     }
 }

@@ -7,7 +7,6 @@ use std::sync::Arc;
 pub struct Decompress {
     qnames: HashMap<Subst, Arc<FullyQualifiedName>>,
     name_prefixes: HashMap<Subst, Arc<NamePrefix>>,
-    name_prefixes_with_params: HashMap<Subst, Arc<NamePrefixWithParams>>,
     types: HashMap<Subst, Arc<Type>>,
 
     subst_counter: usize,
@@ -20,7 +19,6 @@ impl Decompress {
         Decompress {
             qnames: HashMap::new(),
             name_prefixes: HashMap::new(),
-            name_prefixes_with_params: HashMap::new(),
             types: HashMap::new(),
             subst_counter: 0,
         }
@@ -49,7 +47,6 @@ impl Decompress {
         let mut items = vec![];
 
         items.extend(self.name_prefixes.iter().map(|(&k, v)| (k, format!("{:?}", v))));
-        items.extend(self.name_prefixes_with_params.iter().map(|(&k, v)| (k, format!("{:?}", v))));
         items.extend(self.qnames.iter().map(|(&k, v)| (k, format!("{:?}", v))));
         items.extend(self.types.iter().map(|(&k, v)| (k, format!("{:?}", v))));
 
@@ -71,14 +68,17 @@ impl Decompress {
                                        qname: &Arc<FullyQualifiedName>)
                                        -> Arc<FullyQualifiedName> {
         match **qname {
-            FullyQualifiedName::Name { ref name } => {
-                let new_name_prefix = self.decompress_name_prefix_with_params(name);
+            FullyQualifiedName::Name { ref name, ref args } => {
+                let new_name_prefix = self.decompress_name_prefix(name);
+                let decompressed_args = self.decompress_generic_parameter_list(args);
 
-                let decompressed = if Arc::ptr_eq(name, &new_name_prefix) {
+                let decompressed = if Arc::ptr_eq(name, &new_name_prefix) &&
+                                      decompressed_args.ptr_eq(args) {
                     qname.clone()
                 } else {
                     Arc::new(FullyQualifiedName::Name {
-                        name: new_name_prefix
+                        name: new_name_prefix,
+                        args: decompressed_args,
                     })
                 };
 
@@ -87,46 +87,6 @@ impl Decompress {
             }
             FullyQualifiedName::Subst(ref subst) => {
                 self.qnames[subst].clone()
-            }
-        }
-    }
-
-    fn decompress_name_prefix_with_params(&mut self,
-                                          name_prefix: &Arc<NamePrefixWithParams>)
-                                          -> Arc<NamePrefixWithParams> {
-        match **name_prefix {
-            NamePrefixWithParams::Node { ref prefix, ref args } => {
-                let decompressed_prefix = self.decompress_name_prefix(prefix);
-                let decompressed_args = self.decompress_generic_parameter_list(args);
-
-                let decompressed = if Arc::ptr_eq(prefix, &decompressed_prefix) &&
-                   args.params.iter().zip(decompressed_args.params.iter())
-                    .all(|(a, b)| Arc::ptr_eq(a, b)) {
-                    name_prefix.clone()
-                } else {
-                    Arc::new(NamePrefixWithParams::Node {
-                        prefix: decompressed_prefix,
-                        args: decompressed_args,
-                    })
-                };
-
-                if !args.params.is_empty() {
-                    self.alloc_subst(&decompressed,
-                                     |this| &mut this.name_prefixes_with_params);
-                }
-
-                decompressed
-            }
-
-            NamePrefixWithParams::Subst(ref subst) => {
-                if let Some(node) = self.name_prefixes_with_params.get(subst) {
-                    node.clone()
-                } else {
-                    Arc::new(NamePrefixWithParams::Node {
-                        prefix: self.name_prefixes[subst].clone(),
-                        args: GenericArgumentList::new_empty(),
-                    })
-                }
             }
         }
     }
@@ -152,8 +112,19 @@ impl Decompress {
                     })
                 }
             }
+            NamePrefix::InherentImpl { ref self_type } => {
+                let decompressed_self_type = self.decompress_type(self_type);
+
+                if Arc::ptr_eq(self_type, &decompressed_self_type) {
+                    name_prefix.clone()
+                } else {
+                    Arc::new(NamePrefix::InherentImpl {
+                        self_type: decompressed_self_type,
+                    })
+                }
+            }
             NamePrefix::Node { ref prefix, ref ident } => {
-                let decompressed_prefix = self.decompress_name_prefix_with_params(prefix);
+                let decompressed_prefix = self.decompress_name_prefix(prefix);
 
                 if Arc::ptr_eq(prefix, &decompressed_prefix) {
                     name_prefix.clone()
@@ -165,7 +136,7 @@ impl Decompress {
                 }
             }
             NamePrefix::Subst(ref subst) => {
-                // Return here!
+                // Return here! Don't add anything to the dictionary.
                 return self.name_prefixes[subst].clone();
             }
         };
@@ -267,21 +238,28 @@ impl Decompress {
             Type::GenericParam(_) => {
                 return compressed.clone();
             }
-            Type::Fn { is_unsafe, is_variadic, abi, ref return_type, ref params } => {
-                let decompressed_return_type = self.decompress_type(return_type);
+            Type::Fn { is_unsafe, abi, ref return_type, ref params } => {
                 let decompressed_params: Vec<_> = params
                     .iter()
                     .map(|t| self.decompress_type(t))
                     .collect();
 
-                if Arc::ptr_eq(return_type, &decompressed_return_type) &&
+                let decompressed_return_type = return_type.as_ref()
+                                                          .map(|t| self.decompress_type(t));
+
+                let return_types_same = match (return_type, &decompressed_return_type) {
+                    (Some(ref a), Some(ref b)) => Arc::ptr_eq(a, b),
+                    (None, None) => true,
+                    _ => unreachable!(),
+                };
+
+                if return_types_same &&
                     decompressed_params.iter().zip(params.iter())
                         .all(|(a, b)| Arc::ptr_eq(a, b)) {
                     compressed.clone()
                 } else {
                     Arc::new(Type::Fn {
                         is_unsafe,
-                        is_variadic,
                         abi,
                         return_type: decompressed_return_type,
                         params: decompressed_params,

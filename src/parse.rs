@@ -123,12 +123,20 @@ impl<'input> Parser<'input> {
             b'N' => {
                 self.pos += 1;
 
-                let name = self.parse_name_prefix_with_params()?;
+                let name = self.parse_name_prefix()?;
+
+                let args = if self.cur() == b'I' {
+                    self.parse_generic_argument_list()?
+                } else {
+                    GenericArgumentList::new_empty()
+                };
+
                 assert_eq!(self.cur(), b'E');
                 self.pos += 1;
 
                 Ok(Arc::new(FullyQualifiedName::Name {
-                    name
+                    name,
+                    args,
                 }))
             }
             b'S' => {
@@ -164,7 +172,7 @@ impl<'input> Parser<'input> {
         Ok(Subst(index))
     }
 
-    fn parse_name_prefix_with_params(&mut self) -> Result<Arc<NamePrefixWithParams>, String> {
+    fn parse_name_prefix(&mut self) -> Result<Arc<NamePrefix>, String> {
 
         let root = Arc::new(match self.cur() {
             b'S' => {
@@ -180,6 +188,16 @@ impl<'input> Parser<'input> {
                 NamePrefix::TraitImpl {
                     self_type,
                     impled_trait,
+                }
+            }
+
+            b'M' => {
+                self.pos += 1;
+
+                let self_type = self.parse_type()?;
+
+                NamePrefix::InherentImpl {
+                    self_type,
                 }
             }
 
@@ -202,48 +220,14 @@ impl<'input> Parser<'input> {
             }
         });
 
-        let mut path = match *root {
-            NamePrefix::Subst(subst) => {
-                if self.cur() == b'I' {
-                    Arc::new(NamePrefixWithParams::Node {
-                        prefix: root.clone(),
-                        args: self.parse_generic_argument_list()?,
-                    })
-                } else {
-                    // The substitution always signifies the whole
-                    // NamePrefixWithParams production in this case
-                    Arc::new(NamePrefixWithParams::Subst(subst))
-                }
-            }
-            _ => {
-                if self.cur() == b'I' {
-                    return Err("Did not expect path root to have parameter list".to_owned());
-                }
+        let mut path = root;
 
-                Arc::new(NamePrefixWithParams::Node {
-                    prefix: root.clone(),
-                    args: GenericArgumentList::new_empty(),
-                })
-            }
-        };
-
-        while self.cur() != b'E' {
+        while self.cur() != b'E' && self.cur() != b'I' {
             let ident = self.parse_len_prefixed_ident()?;
 
-            let prefix = Arc::new(NamePrefix::Node {
+            path = Arc::new(NamePrefix::Node {
                 prefix: path,
                 ident,
-            });
-
-            let args = if self.cur() == b'I' {
-                self.parse_generic_argument_list()?
-            } else {
-                GenericArgumentList::new_empty()
-            };
-
-            path = Arc::new(NamePrefixWithParams::Node {
-                prefix,
-                args,
             });
         }
 
@@ -288,7 +272,8 @@ impl<'input> Parser<'input> {
             b'o' => Type::BasicType(BasicType::U128),
             b's' => Type::BasicType(BasicType::I16),
             b't' => Type::BasicType(BasicType::U16),
-            b'v' => Type::BasicType(BasicType::Unit),
+            b'u' => Type::BasicType(BasicType::Unit),
+            b'v' => Type::BasicType(BasicType::Ellipsis),
             b'x' => Type::BasicType(BasicType::I64),
             b'y' => Type::BasicType(BasicType::U64),
             b'z' => Type::BasicType(BasicType::Never),
@@ -313,32 +298,33 @@ impl<'input> Parser<'input> {
                     false
                 };
 
-                let is_variadic = if self.cur() == b'L' {
-                    self.pos += 1;
-                    true
-                } else {
-                    false
-                };
-
                 let abi = if self.cur() == b'K' {
                     self.parse_abi()?
                 } else {
                     Abi::Rust
                 };
 
-                let return_type = self.parse_type()?;
+
 
                 let mut params = vec![];
-                while self.cur() != b'E' {
+                while self.cur() != b'E' && self.cur() != b'J' {
                     params.push(self.parse_type()?);
                 }
+
+                let return_type = if self.cur() == b'J' {
+                    self.pos += 1;
+                    Some(self.parse_type()?)
+                } else {
+                    None
+                };
+
+                assert_eq!(self.cur(), b'E');
 
                 // Skip the 'E'
                 self.pos += 1;
 
                 Type::Fn {
                     is_unsafe,
-                    is_variadic,
                     abi,
                     return_type,
                     params,

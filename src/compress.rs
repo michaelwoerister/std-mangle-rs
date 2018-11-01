@@ -5,7 +5,6 @@ use std::sync::Arc;
 
 pub(crate) struct Dictionary {
     prefixes: HashMap<Arc<NamePrefix>, Subst>,
-    prefixes_with_params: HashMap<Arc<NamePrefixWithParams>, Subst>,
     qnames: HashMap<Arc<FullyQualifiedName>, Subst>,
     types: HashMap<Arc<Type>, Subst>,
 
@@ -25,7 +24,6 @@ impl Dictionary {
     fn new() -> Dictionary {
         Dictionary {
             prefixes: HashMap::new(),
-            prefixes_with_params: HashMap::new(),
             qnames: HashMap::new(),
             types: HashMap::new(),
             counter: 0,
@@ -36,7 +34,6 @@ impl Dictionary {
         let mut items = vec![];
 
         items.extend(self.prefixes.iter().map(|(k, &v)| (v, format!("{:?}", k))));
-        items.extend(self.prefixes_with_params.iter().map(|(k, &v)| (v, format!("{:?}", k))));
         items.extend(self.qnames.iter().map(|(k, &v)| (v, format!("{:?}", k))));
         items.extend(self.types.iter().map(|(k, &v)| (v, format!("{:?}", k))));
 
@@ -97,8 +94,19 @@ fn compress_name_prefix(name_prefix: &Arc<NamePrefix>, dict: &mut Dictionary) ->
                 })
             }
         }
+        NamePrefix::InherentImpl { ref self_type } => {
+            let new_self_type = compress_type(self_type, dict);
+
+            if Arc::ptr_eq(self_type, &new_self_type) {
+                name_prefix.clone()
+            } else {
+                Arc::new(NamePrefix::InherentImpl {
+                    self_type: new_self_type,
+                })
+            }
+        }
         NamePrefix::Node { ref prefix, ref ident } => {
-            let new_prefix = compress_name_prefix_with_params(prefix, dict);
+            let new_prefix = compress_name_prefix(prefix, dict);
 
             if Arc::ptr_eq(&new_prefix, prefix) {
                 name_prefix.clone()
@@ -119,52 +127,6 @@ fn compress_name_prefix(name_prefix: &Arc<NamePrefix>, dict: &mut Dictionary) ->
     compressed
 }
 
-
-fn compress_name_prefix_with_params(name_prefix: &Arc<NamePrefixWithParams>,
-                                    dict: &mut Dictionary)
-                                    -> Arc<NamePrefixWithParams> {
-    if let Some(&subst) = dict.prefixes_with_params.get(name_prefix) {
-        return Arc::new(NamePrefixWithParams::Subst(subst));
-    }
-
-    match **name_prefix {
-        NamePrefixWithParams::Node { ref prefix, ref args, } => {
-
-            if args.params.is_empty() {
-                if let Some(&subst) = dict.prefixes.get(prefix) {
-                    return Arc::new(NamePrefixWithParams::Subst(subst));
-                }
-            }
-
-            let new_prefix = compress_name_prefix(prefix, dict);
-
-            let new_args = compress_generic_argument_list(args, dict);
-
-            let compressed = if Arc::ptr_eq(prefix, &new_prefix) && args == &new_args {
-                name_prefix.clone()
-            } else {
-                Arc::new(NamePrefixWithParams::Node {
-                    prefix: new_prefix,
-                    args: new_args,
-                })
-            };
-
-            if !args.params.is_empty() {
-                // The substitution for this production is different from the
-                // nested NamePrefix (because of the additional argument list),
-                // so allocate a new one.
-                dict.alloc_subst(name_prefix, |d| &mut d.prefixes_with_params);
-            }
-
-            compressed
-        }
-        NamePrefixWithParams::Subst(_) => {
-            unreachable!()
-        }
-    }
-}
-
-
 fn compress_fully_qualified_name(qname: &Arc<FullyQualifiedName>,
                                  dict: &mut Dictionary)
                                  -> Arc<FullyQualifiedName> {
@@ -174,14 +136,16 @@ fn compress_fully_qualified_name(qname: &Arc<FullyQualifiedName>,
     }
 
     let compressed = match **qname {
-        FullyQualifiedName::Name { ref name } => {
-            let new_name = compress_name_prefix_with_params(name, dict);
+        FullyQualifiedName::Name { ref name, ref args } => {
+            let new_name = compress_name_prefix(name, dict);
+            let new_args = compress_generic_argument_list(args, dict);
 
-            if Arc::ptr_eq(name, &new_name) {
+            if Arc::ptr_eq(name, &new_name) && new_args.ptr_eq(args) {
                 qname.clone()
             } else {
                 Arc::new(FullyQualifiedName::Name {
                     name: new_name,
+                    args: new_args,
                 })
             }
         }
@@ -261,17 +225,15 @@ fn compress_type(ty: &Arc<Type>, dict: &mut Dictionary) -> Arc<Type> {
             ref return_type,
             ref params,
             is_unsafe,
-            is_variadic,
             abi,
         } => {
-            let return_type = compress_type(return_type, dict);
             let params = params.iter().map(|t| compress_type(t, dict)).collect();
+            let return_type = return_type.as_ref().map(|t| compress_type(t, dict));
 
             Arc::new(Type::Fn {
                 return_type,
                 params,
                 is_unsafe,
-                is_variadic,
                 abi,
             })
         }

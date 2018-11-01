@@ -72,11 +72,10 @@ impl Arbitrary for Type {
             8 => Type::GenericParam(gen_valid_ident(g)),
             9 => {
                 Type::Fn {
-                    return_type: Arc::new(Arbitrary::arbitrary(g)),
-                    params: Arbitrary::arbitrary(g),
                     is_unsafe: Arbitrary::arbitrary(g),
-                    is_variadic: Arbitrary::arbitrary(g),
                     abi: Arbitrary::arbitrary(g),
+                    params: Arbitrary::arbitrary(g),
+                    return_type: Arbitrary::arbitrary(g),
                 }
             }
             _ => unreachable!()
@@ -131,30 +130,20 @@ impl Arbitrary for BasicType {
     }
 }
 
-impl Arbitrary for NamePrefixWithParams {
+impl Arbitrary for NamePrefix {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
 
         let size = { let s = g.size(); g.gen_range(0, s) };
 
-        let mut node = NamePrefixWithParams::Node {
-            prefix: Arc::new(NamePrefix::CrateId {
-                    name: gen_valid_ident(g),
-                    dis: "abc".to_string(), // TODO
-            }),
-            args: GenericArgumentList {
-                params: vec![],
-            }
-        } ;
+        let mut node = NamePrefix::CrateId {
+            name: gen_valid_ident(g),
+            dis: "abc".to_string(), // TODO
+        };
 
         for _ in 0 .. size {
-            let prefix = NamePrefix::Node {
+            node = NamePrefix::Node {
                 prefix: Arc::new(node),
                 ident: Arbitrary::arbitrary(g),
-            };
-
-            node = NamePrefixWithParams::Node {
-                prefix: Arc::new(prefix),
-                args: Arbitrary::arbitrary(g),
             };
         }
 
@@ -165,7 +154,8 @@ impl Arbitrary for NamePrefixWithParams {
 impl Arbitrary for FullyQualifiedName {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         FullyQualifiedName::Name {
-            name: Arbitrary::arbitrary(g)
+            name: Arbitrary::arbitrary(g),
+            args: Arbitrary::arbitrary(g),
         }
     }
 }
