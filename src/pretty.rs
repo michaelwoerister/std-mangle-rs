@@ -68,14 +68,14 @@ impl NamePrefix {
     }
 }
 
-impl FullyQualifiedName {
+impl QName {
     pub fn pretty_print(&self, out: &mut String) {
         match *self {
-            FullyQualifiedName::Name { ref name, ref args } => {
+            QName::Name { ref name, ref args } => {
                 name.pretty_print(out);
                 args.pretty_print(out);
             }
-            FullyQualifiedName::Subst(subst) => {
+            QName::Subst(subst) => {
                 subst.pretty_print(out);
             }
         }

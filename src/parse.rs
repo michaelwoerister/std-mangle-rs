@@ -19,7 +19,7 @@ impl<'input> Parser<'input> {
 
         parser.parse_symbol_prefix()?;
 
-        let path = parser.parse_fully_qualified_name()
+        let path = parser.parse_qname()
                          .map_err(|s| format!("In {:?}: Parsing error at pos {}: {}",
                             str::from_utf8(mangled).unwrap(),
                             parser.pos,
@@ -117,7 +117,7 @@ impl<'input> Parser<'input> {
         Ok(value)
     }
 
-    fn parse_fully_qualified_name(&mut self) -> Result<Arc<FullyQualifiedName>, String> {
+    fn parse_qname(&mut self) -> Result<Arc<QName>, String> {
 
         match self.cur() {
             b'N' => {
@@ -134,14 +134,14 @@ impl<'input> Parser<'input> {
                 assert_eq!(self.cur(), b'E');
                 self.pos += 1;
 
-                Ok(Arc::new(FullyQualifiedName::Name {
+                Ok(Arc::new(QName::Name {
                     name,
                     args,
                 }))
             }
             b'S' => {
                 let subst = self.parse_subst()?;
-                Ok(Arc::new(FullyQualifiedName::Subst(subst)))
+                Ok(Arc::new(QName::Subst(subst)))
             }
             _ => {
                 return Err(format!("Expected 'N' or 'S', found {:?}", self.cur_char()));
@@ -183,7 +183,7 @@ impl<'input> Parser<'input> {
                 self.pos += 1;
 
                 let self_type = self.parse_type()?;
-                let impled_trait = self.parse_fully_qualified_name()?;
+                let impled_trait = self.parse_qname()?;
 
                 NamePrefix::TraitImpl {
                     self_type,
@@ -341,7 +341,7 @@ impl<'input> Parser<'input> {
             b'N' => {
                 // We have to back up here
                 self.pos -= 1;
-                Type::Named(self.parse_fully_qualified_name()?)
+                Type::Named(self.parse_qname()?)
             }
 
             b'O' => Type::RawPtrMut(self.parse_type()?),

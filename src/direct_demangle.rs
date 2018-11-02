@@ -12,12 +12,7 @@ pub struct Demangler<'input> {
 impl<'input> Demangler<'input> {
 
     pub fn demangle(input: &[u8]) -> Result<String, String> {
-        let mut state = Demangler {
-            pos: 0,
-            input,
-            out: Vec::new(),
-            dict: Vec::new(),
-        };
+        let mut state = Demangler::new(input);
 
         if let Err(msg) = state.demangle_symbol() {
             return Err(format!("Error demangling at position {}: {} - {}",
@@ -27,6 +22,15 @@ impl<'input> Demangler<'input> {
         }
 
         String::from_utf8(state.out).map_err(|e| format!("{}", e))
+    }
+
+    fn new(input: &[u8]) -> Demangler {
+        Demangler {
+            pos: 0,
+            input,
+            out: Vec::new(),
+            dict: Vec::new(),
+        }
     }
 
     fn demangle_symbol(&mut self) -> Result<(), String> {
@@ -45,6 +49,7 @@ impl<'input> Demangler<'input> {
 
     fn alloc_subst(&mut self, start: usize) {
         let end = self.out.len();
+        debug_assert!(self.dict.last() != Some(&(start, end)));
         self.dict.push((start, end));
     }
 
@@ -358,6 +363,7 @@ impl<'input> Demangler<'input> {
             b'S' => {
                 self.pos -= 1;
                 self.demangle_subst()?;
+                return Ok(());
             }
             b'T' => {
                 self.out.push(b'(');
@@ -405,7 +411,6 @@ impl<'input> Demangler<'input> {
         self.out.resize(out_start + len, 0);
 
         let (prefix, new_part) = self.out.split_at_mut(out_start);
-
         new_part.copy_from_slice(&prefix[range_to_copy.0 .. range_to_copy.1]);
 
         Ok(())
@@ -437,22 +442,36 @@ impl<'input> Demangler<'input> {
 
 #[cfg(test)]
 mod tests {
+    use ast::*;
+
+    fn to_debug_dictionary(input: &[u8], dict: &[(usize, usize)]) -> Vec<(Subst, String)> {
+        dict.iter().enumerate().map(|(i, &(start, end))| {
+            (Subst(i), String::from_utf8(input[start .. end].to_owned()).unwrap())
+        }).collect()
+    }
+
     quickcheck! {
-        fn demangle_direct(symbol: ::ast::Symbol) -> bool {
+        fn demangle_direct(symbol: Symbol) -> bool {
             let mut expected = String::new();
-            let pretty = symbol.pretty_print(&mut expected);
+            symbol.pretty_print(&mut expected);
 
             let mut uncompressed_mangled = String::new();
             symbol.mangle(&mut uncompressed_mangled);
 
-            let compressed_symbol = ::compress::compress(&symbol);
+            let (compressed_symbol, compress_dict) = ::compress::compress_ext(&symbol);
 
             let mut compressed_mangled = String::new();
             compressed_symbol.mangle(&mut compressed_mangled);
 
-            let actual = ::direct_demangle::Demangler::demangle(compressed_mangled.as_bytes()).unwrap();
+            let mut dd = ::direct_demangle::Demangler::new(compressed_mangled.as_bytes());
+            dd.demangle_symbol().unwrap();
+            let actual = String::from_utf8(dd.out.clone()).unwrap();
+            // ::direct_demangle::Demangler::demangle(compressed_mangled.as_bytes()).unwrap();
 
             if actual != expected {
+                ::debug::compare_dictionaries(&compress_dict.to_debug_dictionary_pretty(),
+                                              &to_debug_dictionary(&dd.out, &dd.dict));
+
                 panic!("expected:     {}\n\
                         actual:       {}\n\
                         compressed:   {}\n\

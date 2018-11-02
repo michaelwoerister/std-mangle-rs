@@ -71,16 +71,16 @@ impl NamePrefix {
     }
 }
 
-impl FullyQualifiedName {
+impl QName {
     pub fn mangle(&self, out: &mut String) {
         match *self {
-            FullyQualifiedName::Name { ref name, ref args } => {
+            QName::Name { ref name, ref args } => {
                 out.push('N');
                 name.mangle(out);
                 args.mangle(out);
                 out.push('E');
             }
-            FullyQualifiedName::Subst(subst) => {
+            QName::Subst(subst) => {
                 subst.mangle(out);
             }
         }

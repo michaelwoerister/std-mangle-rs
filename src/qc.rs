@@ -156,9 +156,9 @@ impl Arbitrary for NamePrefix {
     }
 }
 
-impl Arbitrary for FullyQualifiedName {
+impl Arbitrary for QName {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        FullyQualifiedName::Name {
+        QName::Name {
             name: Arbitrary::arbitrary(g),
             args: Arbitrary::arbitrary(g),
         }

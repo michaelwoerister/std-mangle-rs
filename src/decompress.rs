@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 pub struct Decompress {
     name_prefixes: HashMap<Subst, Arc<NamePrefix>>,
-    qnames: HashMap<Subst, Arc<FullyQualifiedName>>,
+    qnames: HashMap<Subst, Arc<QName>>,
     types: HashMap<Subst, Arc<Type>>,
 
     subst_counter: usize,
@@ -25,25 +25,11 @@ impl Decompress {
     }
 
     pub fn decompress(symbol: &Symbol) -> Symbol {
-
-        let decompressed_qname = Decompress::new()
-            .decompress_fully_qualified_name(&symbol.name);
-
-        Symbol {
-            name: decompressed_qname,
-        }
+        Decompress::new().decompress_symbol(symbol)
     }
 
-    pub(crate) fn decompress_symbol(&mut self, symbol: &Symbol) -> Symbol {
-
-        let decompressed_qname = self.decompress_fully_qualified_name(&symbol.name);
-
-        Symbol {
-            name: decompressed_qname,
-        }
-    }
-
-    pub(crate) fn to_debug_dictionary(&self) -> Vec<(Subst, String)> {
+    #[cfg(test)]
+    pub fn to_debug_dictionary(&self) -> Vec<(Subst, String)> {
         let mut items = vec![];
 
         items.extend(self.name_prefixes.iter().map(|(&k, v)| (k, format!("{:?}", v))));
@@ -64,11 +50,16 @@ impl Decompress {
         dict(self).insert(subst, node.clone());
     }
 
-    fn decompress_fully_qualified_name(&mut self,
-                                       qname: &Arc<FullyQualifiedName>)
-                                       -> Arc<FullyQualifiedName> {
+    fn decompress_symbol(&mut self, symbol: &Symbol) -> Symbol {
+        let decompressed_qname = self.decompress_qname(&symbol.name);
+        Symbol {
+            name: decompressed_qname,
+        }
+    }
+
+    fn decompress_qname(&mut self, qname: &Arc<QName>) -> Arc<QName> {
         match **qname {
-            FullyQualifiedName::Name { ref name, ref args } => {
+            QName::Name { ref name, ref args } => {
                 let new_name_prefix = self.decompress_name_prefix(name);
                 let decompressed_args = self.decompress_generic_parameter_list(args);
 
@@ -76,7 +67,7 @@ impl Decompress {
                                       decompressed_args.ptr_eq(args) {
                     qname.clone()
                 } else {
-                    Arc::new(FullyQualifiedName::Name {
+                    Arc::new(QName::Name {
                         name: new_name_prefix,
                         args: decompressed_args,
                     })
@@ -89,16 +80,16 @@ impl Decompress {
                 decompressed
             }
 
-            FullyQualifiedName::Subst(ref subst) => {
+            QName::Subst(ref subst) => {
                 if let Some(qname) = self.qnames.get(subst) {
                     qname.clone()
                 } else if let Some(prefix) = self.name_prefixes.get(subst) {
-                    Arc::new(FullyQualifiedName::Name {
+                    Arc::new(QName::Name {
                         name: prefix.clone(),
                         args: GenericArgumentList::new_empty(),
                     })
                 } else if let Some(ty) = self.types.get(subst) {
-                    Arc::new(FullyQualifiedName::Name {
+                    Arc::new(QName::Name {
                         name: Arc::new(NamePrefix::InherentImpl {
                             self_type: ty.clone(),
                         }),
@@ -120,7 +111,7 @@ impl Decompress {
             }
             NamePrefix::TraitImpl { ref self_type, ref impled_trait } => {
                 let decompressed_self_type = self.decompress_type(self_type);
-                let decompressed_impled_trait = self.decompress_fully_qualified_name(impled_trait);
+                let decompressed_impled_trait = self.decompress_qname(impled_trait);
 
                 if Arc::ptr_eq(self_type, &decompressed_self_type) &&
                    Arc::ptr_eq(impled_trait, &decompressed_impled_trait) {
@@ -252,7 +243,7 @@ impl Decompress {
                 }
             }
             Type::Named(ref qname) => {
-                let decompressed_qname = self.decompress_fully_qualified_name(qname);
+                let decompressed_qname = self.decompress_qname(qname);
 
                 // Exit here!
                 return if Arc::ptr_eq(qname, &decompressed_qname) {
@@ -295,7 +286,7 @@ impl Decompress {
                 } else if let Some(qname) = self.qnames.get(subst) {
                     Arc::new(Type::Named(qname.clone()))
                 } else if let Some(prefix) = self.name_prefixes.get(subst) {
-                    Arc::new(Type::Named(Arc::new(FullyQualifiedName::Name {
+                    Arc::new(Type::Named(Arc::new(QName::Name {
                         name: prefix.clone(),
                         args: GenericArgumentList::new_empty(),
                     })))
@@ -321,12 +312,12 @@ mod tests {
         fn compress_decompress(symbol: Symbol) -> bool {
             let (compressed, c_dict) = ::compress::compress_ext(&symbol);
 
-            let mut d = Decompress::new();
-            let decompressed = d.decompress_symbol(&compressed);
+            let mut decompressor = Decompress::new();
+            let decompressed = decompressor.decompress_symbol(&compressed);
 
             if symbol != decompressed {
                 debug::compare_dictionaries(
-                    &d.to_debug_dictionary(),
+                    &decompressor.to_debug_dictionary(),
                     &c_dict.to_debug_dictionary(),
                 );
 

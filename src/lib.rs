@@ -18,10 +18,10 @@ pub mod parse;
 pub mod direct_demangle;
 
 mod same;
-mod debug;
 
 #[cfg(test)]
+mod debug;
+#[cfg(test)]
 mod generated_tests;
-
 #[cfg(test)]
 mod qc;

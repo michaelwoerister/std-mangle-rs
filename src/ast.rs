@@ -27,7 +27,7 @@ pub enum NamePrefix {
     },
     TraitImpl {
         self_type: Arc<Type>,
-        impled_trait: Arc<FullyQualifiedName>,
+        impled_trait: Arc<QName>,
         // TODO: bounds
     },
     InherentImpl {
@@ -41,7 +41,7 @@ pub enum NamePrefix {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-pub enum FullyQualifiedName {
+pub enum QName {
     Name {
         name: Arc<NamePrefix>,
         args: GenericArgumentList,
@@ -61,7 +61,7 @@ pub enum Type {
     RawPtrMut(Arc<Type>),
     Array(Option<usize>, Arc<Type>),
     Tuple(Vec<Arc<Type>>),
-    Named(Arc<FullyQualifiedName>),
+    Named(Arc<QName>),
     GenericParam(String), // Must support hygiene?
     Fn {
         is_unsafe: bool,
@@ -111,7 +111,7 @@ pub enum BasicType {
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Symbol {
-    pub name: Arc<FullyQualifiedName>,
+    pub name: Arc<QName>,
     // pub instantiating_crate: Arc<NamePrefix>,
 }
 

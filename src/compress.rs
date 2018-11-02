@@ -6,7 +6,7 @@ use same::Same;
 
 pub(crate) struct Dictionary {
     prefixes: HashMap<Arc<NamePrefix>, Subst>,
-    qnames: HashMap<Arc<FullyQualifiedName>, Subst>,
+    qnames: HashMap<Arc<QName>, Subst>,
     types: HashMap<Arc<Type>, Subst>,
     subst_counter: usize,
 }
@@ -37,16 +37,16 @@ impl Dictionary {
         }
     }
 
-    fn lookup_qname_subst(&self, qname: &FullyQualifiedName) -> Option<Subst> {
+    fn lookup_qname_subst(&self, qname: &QName) -> Option<Subst> {
         match *qname {
-            FullyQualifiedName::Name { ref name, ref args } => {
+            QName::Name { ref name, ref args } => {
                 if args.is_empty() {
                     self.lookup_prefix_subst(name)
                 } else {
                     self.qnames.get(qname).cloned()
                 }
             }
-            FullyQualifiedName::Subst(_) => {
+            QName::Subst(_) => {
                 unreachable!()
             }
         }
@@ -75,12 +75,38 @@ impl Dictionary {
         }
     }
 
-    pub(crate) fn to_debug_dictionary(&self) -> Vec<(Subst, String)> {
+    #[cfg(test)]
+    pub fn to_debug_dictionary(&self) -> Vec<(Subst, String)> {
         let mut items = vec![];
 
         items.extend(self.prefixes.iter().map(|(k, &v)| (v, format!("{:?}", k))));
         items.extend(self.qnames.iter().map(|(k, &v)| (v, format!("{:?}", k))));
         items.extend(self.types.iter().map(|(k, &v)| (v, format!("{:?}", k))));
+
+        items.sort_by_key(|&(k, _)| k);
+
+        items
+    }
+
+    #[cfg(test)]
+    pub fn to_debug_dictionary_pretty(&self) -> Vec<(Subst, String)> {
+        let mut items = vec![];
+
+        items.extend(self.prefixes.iter().map(|(k, &v)| {
+            let mut pretty = String::new();
+            k.pretty_print(&mut pretty);
+            (v, pretty)
+        }));
+        items.extend(self.qnames.iter().map(|(k, &v)| {
+            let mut pretty = String::new();
+            k.pretty_print(&mut pretty);
+            (v, pretty)
+        }));
+        items.extend(self.types.iter().map(|(k, &v)| {
+            let mut pretty = String::new();
+            k.pretty_print(&mut pretty);
+            (v, pretty)
+        }));
 
         items.sort_by_key(|&(k, _)| k);
 
@@ -129,7 +155,7 @@ pub(crate) fn compress_ext(symbol: &Symbol) -> (Symbol, Dictionary) {
     let mut dict = Dictionary::new();
 
     let compressed = Symbol {
-        name: compress_fully_qualified_name(&symbol.name, &mut dict),
+        name: compress_qname(&symbol.name, &mut dict),
         // instantiating_crate: compress_name_prefix(&symbol.instantiating_crate, &mut dict),
     };
 
@@ -153,7 +179,7 @@ fn compress_name_prefix(name_prefix: &Arc<NamePrefix>, dict: &mut Dictionary) ->
         }
         NamePrefix::TraitImpl { ref self_type, ref impled_trait } => {
             let compressed_self_type = compress_type(self_type, dict);
-            let compressed_impled_trait = compress_fully_qualified_name(impled_trait, dict);
+            let compressed_impled_trait = compress_qname(impled_trait, dict);
 
             // Don't allocate a new node if it would be the same as the old one
             if compressed_self_type.same_as(self_type) &&
@@ -204,15 +230,13 @@ fn compress_name_prefix(name_prefix: &Arc<NamePrefix>, dict: &mut Dictionary) ->
     compressed
 }
 
-fn compress_fully_qualified_name(qname: &Arc<FullyQualifiedName>,
-                                 dict: &mut Dictionary)
-                                 -> Arc<FullyQualifiedName> {
+fn compress_qname(qname: &Arc<QName>, dict: &mut Dictionary) -> Arc<QName> {
     if let Some(subst) = dict.lookup_qname_subst(qname) {
-        return Arc::new(FullyQualifiedName::Subst(subst));
+        return Arc::new(QName::Subst(subst));
     }
 
     match **qname {
-        FullyQualifiedName::Name { ref name, ref args } => {
+        QName::Name { ref name, ref args } => {
             let compressed_name = compress_name_prefix(name, dict);
             let compressed_args = compress_generic_argument_list(args, dict);
 
@@ -226,13 +250,13 @@ fn compress_fully_qualified_name(qname: &Arc<FullyQualifiedName>,
             if compressed_name.same_as(name) && compressed_args.same_as(args) {
                 qname.clone()
             } else {
-                Arc::new(FullyQualifiedName::Name {
+                Arc::new(QName::Name {
                     name: compressed_name,
                     args: compressed_args,
                 })
             }
         }
-        FullyQualifiedName::Subst(_) => {
+        QName::Subst(_) => {
             unreachable!()
         }
     }
@@ -260,7 +284,7 @@ fn compress_type(ty: &Arc<Type>, dict: &mut Dictionary) -> Arc<Type> {
         Type::Named(ref name) => {
             // NOTE: Always return here so we don't add something to the dictionary.
             //       Compressing the qname has already taken care of that.
-            return dedup(ty, name, compress_fully_qualified_name(name, dict), Type::Named)
+            return dedup(ty, name, compress_qname(name, dict), Type::Named)
         }
         Type::Ref(ref inner) => {
             dedup(ty, inner, compress_type(inner, dict), Type::Ref)
