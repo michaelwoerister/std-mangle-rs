@@ -6,9 +6,6 @@ pub struct Demangler<'input> {
 
     input: &'input [u8],
     out: Vec<u8>,
-
-    // subst_counter: usize,
-    // dict: HashMap<usize, (usize, usize)>,
     dict: Vec<(usize, usize)>,
 }
 
@@ -23,14 +20,16 @@ impl<'input> Demangler<'input> {
         };
 
         if let Err(msg) = state.demangle_symbol() {
-            return Err(format!("Error demangling at position {}: {}", state.pos, msg));
+            return Err(format!("Error demangling at position {}: {} - {}",
+                               state.pos,
+                               msg,
+                               str::from_utf8(input).unwrap()));
         }
 
         String::from_utf8(state.out).map_err(|e| format!("{}", e))
     }
 
     fn demangle_symbol(&mut self) -> Result<(), String> {
-
         assert!(self.pos == 0);
         if &self.input[0..2] != b"_R" {
             return Err("Not a Rust symbol".to_string())
@@ -218,17 +217,18 @@ impl<'input> Demangler<'input> {
         assert_eq!(self.cur(), b'I');
 
         self.pos += 1;
-
         self.out.push(b'<');
 
         while self.cur() != b'E' {
             self.demangle_type()?;
+            self.out.push(b',');
         }
 
         assert_eq!(self.cur(), b'E');
         self.pos += 1;
 
-        self.out.push(b'>');
+        assert_eq!(self.out.last(), Some(&b','));
+        *self.out.last_mut().unwrap() = b'>';
 
         Ok(())
     }
@@ -297,8 +297,16 @@ impl<'input> Demangler<'input> {
 
                 self.out.extend_from_slice(b"fn(");
 
+                let mut any_params = false;
                 while self.cur() != b'E' && self.cur() != b'J' {
                     self.demangle_type()?;
+                    self.out.push(b',');
+                    any_params = true;
+                }
+
+                if any_params {
+                    debug_assert_eq!(self.out.last(), Some(&b','));
+                    self.out.pop();
                 }
 
                 self.out.push(b')');
@@ -321,6 +329,7 @@ impl<'input> Demangler<'input> {
                     return Err(format!("While demangling generic parameter name: Expected 'E', found {:?}", self.cur() as char));
                 }
                 self.pos += 1;
+                return Ok(());
             }
 
             b'N' => {
@@ -347,6 +356,7 @@ impl<'input> Demangler<'input> {
                 self.demangle_type()?;
             }
             b'S' => {
+                self.pos -= 1;
                 self.demangle_subst()?;
             }
             b'T' => {
@@ -386,11 +396,9 @@ impl<'input> Demangler<'input> {
         };
 
         assert_eq!(self.cur(), b'_');
-
         self.pos += 1;
 
         let range_to_copy = self.dict[index];
-
         let len = range_to_copy.1 - range_to_copy.0;
 
         let out_start = self.out.len();
@@ -427,31 +435,35 @@ impl<'input> Demangler<'input> {
 }
 
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    quickcheck! {
+        fn demangle_direct(symbol: ::ast::Symbol) -> bool {
+            let mut expected = String::new();
+            let pretty = symbol.pretty_print(&mut expected);
 
-//     quickcheck! {
-//         fn demangle_direct(symbol: Symbol) -> bool {
-//             let mut mangled = String::new();
-//             symbol.mangle(&mut mangled);
-//             match Parser::parse(mangled.as_bytes()) {
-//                 Ok(parsed) => {
-//                     if symbol != parsed {
-//                         panic!("expected: {:?}\n\
-//                                 actual:   {:?}\n\
-//                                 mangled:  {}\n",
-//                                 symbol,
-//                                 parsed,
-//                                 mangled)
-//                     } else {
-//                         true
-//                     }
-//                 }
-//                 Err(e) => {
-//                     panic!("{}", e)
-//                 }
-//             }
-//         }
-//     }
-// }
+            let mut uncompressed_mangled = String::new();
+            symbol.mangle(&mut uncompressed_mangled);
+
+            let compressed_symbol = ::compress::compress(&symbol);
+
+            let mut compressed_mangled = String::new();
+            compressed_symbol.mangle(&mut compressed_mangled);
+
+            let actual = ::direct_demangle::Demangler::demangle(compressed_mangled.as_bytes()).unwrap();
+
+            if actual != expected {
+                panic!("expected:     {}\n\
+                        actual:       {}\n\
+                        compressed:   {}\n\
+                        uncompressed: {}\n",
+                        expected,
+                        actual,
+                        compressed_mangled,
+                        uncompressed_mangled)
+            } else {
+                true
+            }
+        }
+    }
+}

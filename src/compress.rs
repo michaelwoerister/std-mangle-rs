@@ -2,13 +2,13 @@
 use ast::*;
 use std::collections::HashMap;
 use std::sync::Arc;
+use same::Same;
 
 pub(crate) struct Dictionary {
     prefixes: HashMap<Arc<NamePrefix>, Subst>,
     qnames: HashMap<Arc<FullyQualifiedName>, Subst>,
     types: HashMap<Arc<Type>, Subst>,
-
-    counter: usize,
+    subst_counter: usize,
 }
 
 impl Dictionary {
@@ -16,9 +16,54 @@ impl Dictionary {
         where D: FnOnce(&mut Self) -> &mut HashMap<Arc<T>, Subst>,
               T: ::std::hash::Hash + Eq,
     {
-        let subst = Subst(self.counter);
-        self.counter += 1;
-        dict(self).insert(node.clone(), subst);
+        let subst = Subst(self.subst_counter);
+        self.subst_counter += 1;
+        assert!(dict(self).insert(node.clone(), subst).is_none());
+    }
+
+    fn lookup_prefix_subst(&self, name_prefix: &NamePrefix) -> Option<Subst> {
+        match *name_prefix {
+            NamePrefix::CrateId { .. } |
+            NamePrefix::TraitImpl { .. } |
+            NamePrefix::Node { .. } => {
+                self.prefixes.get(name_prefix).cloned()
+            }
+            NamePrefix::InherentImpl { ref self_type } => {
+                self.lookup_type_subst(self_type)
+            }
+            NamePrefix::Subst(_) => {
+                unreachable!()
+            }
+        }
+    }
+
+    fn lookup_qname_subst(&self, qname: &FullyQualifiedName) -> Option<Subst> {
+        match *qname {
+            FullyQualifiedName::Name { ref name, ref args } => {
+                if args.is_empty() {
+                    self.lookup_prefix_subst(name)
+                } else {
+                    self.qnames.get(qname).cloned()
+                }
+            }
+            FullyQualifiedName::Subst(_) => {
+                unreachable!()
+            }
+        }
+    }
+
+    fn lookup_type_subst(&self, ty: &Type) -> Option<Subst> {
+        match *ty {
+            Type::Named(ref qname) => {
+                self.lookup_qname_subst(qname)
+            }
+            Type::Subst(_) => {
+                unreachable!()
+            }
+            _ => {
+                self.types.get(ty).cloned()
+            }
+        }
     }
 
     fn new() -> Dictionary {
@@ -26,7 +71,7 @@ impl Dictionary {
             prefixes: HashMap::new(),
             qnames: HashMap::new(),
             types: HashMap::new(),
-            counter: 0,
+            subst_counter: 0,
         }
     }
 
@@ -40,6 +85,38 @@ impl Dictionary {
         items.sort_by_key(|&(k, _)| k);
 
         items
+    }
+
+    fn sanity_check(&self) {
+        // Check basic types never get substituted
+        for type_key in self.types.keys() {
+            match **type_key {
+                Type::BasicType(_) => {
+                    panic!("Found substituted basic type")
+                }
+                _ => {}
+            }
+        }
+
+        // Check that there are no duplicate substitution indices and no holes
+        // in the sequence.
+        {
+            let mut all_substs: Vec<_> = self.prefixes.values()
+                .chain(self.qnames.values())
+                .chain(self.types.values())
+                .map(|&Subst(idx)| idx)
+                .collect();
+
+            if all_substs.len() <= 1 {
+                return
+            }
+
+            all_substs.sort();
+
+            for i in 1 .. all_substs.len() {
+                assert!(all_substs[i - 1] == all_substs[i] - 1);
+            }
+        }
     }
 }
 
@@ -57,14 +134,7 @@ pub(crate) fn compress_ext(symbol: &Symbol) -> (Symbol, Dictionary) {
     };
 
     if cfg!(debug_assertions) {
-        for type_key in dict.types.keys() {
-            match **type_key {
-                Type::BasicType(_) => {
-                    panic!("Found substituted basic type")
-                }
-                _ => {}
-            }
-        }
+        dict.sanity_check();
     }
 
     (compressed, dict)
@@ -72,47 +142,54 @@ pub(crate) fn compress_ext(symbol: &Symbol) -> (Symbol, Dictionary) {
 
 fn compress_name_prefix(name_prefix: &Arc<NamePrefix>, dict: &mut Dictionary) -> Arc<NamePrefix> {
 
-    if let Some(&subst) = dict.prefixes.get(name_prefix) {
+    if let Some(subst) = dict.lookup_prefix_subst(name_prefix) {
         return Arc::new(NamePrefix::Subst(subst));
     }
 
     let compressed = match **name_prefix {
         NamePrefix::CrateId { .. } => {
+            // We cannot compress them, just clone the reference to the node
             name_prefix.clone()
         }
         NamePrefix::TraitImpl { ref self_type, ref impled_trait } => {
-            let new_self_type = compress_type(self_type, dict);
-            let new_impled_trait = compress_fully_qualified_name(impled_trait, dict);
+            let compressed_self_type = compress_type(self_type, dict);
+            let compressed_impled_trait = compress_fully_qualified_name(impled_trait, dict);
 
-            if Arc::ptr_eq(self_type, &new_self_type) &&
-               Arc::ptr_eq(impled_trait, &new_impled_trait) {
+            // Don't allocate a new node if it would be the same as the old one
+            if compressed_self_type.same_as(self_type) &&
+               compressed_impled_trait.same_as(impled_trait) {
                 name_prefix.clone()
             } else {
                 Arc::new(NamePrefix::TraitImpl {
-                    self_type: new_self_type,
-                    impled_trait: new_impled_trait,
+                    self_type: compressed_self_type,
+                    impled_trait: compressed_impled_trait,
                 })
             }
         }
         NamePrefix::InherentImpl { ref self_type } => {
-            let new_self_type = compress_type(self_type, dict);
+            let compressed_self_type = compress_type(self_type, dict);
 
-            if Arc::ptr_eq(self_type, &new_self_type) {
+            // NOTE: We return here and thus don't allocate a substitution.
+            //       Compressing `self_type` has already introduced one.
+            //
+            // Don't allocate a new node if it would be the same as the old one.
+            return if compressed_self_type.same_as(self_type) {
                 name_prefix.clone()
             } else {
                 Arc::new(NamePrefix::InherentImpl {
-                    self_type: new_self_type,
+                    self_type: compressed_self_type,
                 })
-            }
+            };
         }
         NamePrefix::Node { ref prefix, ref ident } => {
-            let new_prefix = compress_name_prefix(prefix, dict);
+            let compressed_prefix = compress_name_prefix(prefix, dict);
 
-            if Arc::ptr_eq(&new_prefix, prefix) {
+            // Don't allocate a new node if it would be the same as the old one
+            if compressed_prefix.same_as(prefix) {
                 name_prefix.clone()
             } else {
                 Arc::new(NamePrefix::Node {
-                    prefix: new_prefix,
+                    prefix: compressed_prefix,
                     ident: ident.clone(),
                 })
             }
@@ -130,114 +207,101 @@ fn compress_name_prefix(name_prefix: &Arc<NamePrefix>, dict: &mut Dictionary) ->
 fn compress_fully_qualified_name(qname: &Arc<FullyQualifiedName>,
                                  dict: &mut Dictionary)
                                  -> Arc<FullyQualifiedName> {
-
-    if let Some(&subst) = dict.qnames.get(qname) {
+    if let Some(subst) = dict.lookup_qname_subst(qname) {
         return Arc::new(FullyQualifiedName::Subst(subst));
     }
 
-    let compressed = match **qname {
+    match **qname {
         FullyQualifiedName::Name { ref name, ref args } => {
-            let new_name = compress_name_prefix(name, dict);
-            let new_args = compress_generic_argument_list(args, dict);
+            let compressed_name = compress_name_prefix(name, dict);
+            let compressed_args = compress_generic_argument_list(args, dict);
 
-            if Arc::ptr_eq(name, &new_name) && new_args.ptr_eq(args) {
+            if !args.is_empty() {
+                // If there are generic arguments, we add a new substitution in
+                // order to capture them.
+                dict.alloc_subst(qname, |d| &mut d.qnames);
+            }
+
+            // Don't allocate a new node if it would be the same as the old one
+            if compressed_name.same_as(name) && compressed_args.same_as(args) {
                 qname.clone()
             } else {
                 Arc::new(FullyQualifiedName::Name {
-                    name: new_name,
-                    args: new_args,
+                    name: compressed_name,
+                    args: compressed_args,
                 })
             }
         }
         FullyQualifiedName::Subst(_) => {
             unreachable!()
         }
-    };
-
-    dict.alloc_subst(qname, |d| &mut d.qnames);
-
-    compressed
-}
-
-fn compress_generic_argument_list(args: &GenericArgumentList, dict: &mut Dictionary) -> GenericArgumentList {
-    GenericArgumentList {
-        params: args.params.iter().map(|t| compress_type(t, dict)).collect(),
     }
 }
 
-#[allow(unused)]
-fn compress_param_bound(b: &Arc<ParamBound>, dict: &mut Dictionary) -> Arc<ParamBound> {
-    Arc::new(ParamBound {
-        param_name: b.param_name.clone(),
-        bounds: b.bounds.iter().map(|t| compress_type(t, dict)).collect()
-    })
+fn compress_generic_argument_list(args: &GenericArgumentList,
+                                  dict: &mut Dictionary)
+                                  -> GenericArgumentList {
+    GenericArgumentList(args.iter().map(|t| compress_type(t, dict)).collect())
 }
 
 fn compress_type(ty: &Arc<Type>, dict: &mut Dictionary) -> Arc<Type> {
 
-    if let Some(&subst) = dict.types.get(ty) {
+    if let Some(subst) = dict.lookup_type_subst(ty) {
         return Arc::new(Type::Subst(subst));
     }
 
     let compressed = match **ty {
         Type::GenericParam(_) |
         Type::BasicType(_) => {
-            // Return here. We never allocate a substitution for basic types.
+            // NOTE: We return here as we never allocate a substitution for
+            //       basic types or generic parameter names.
             return ty.clone()
         },
-
         Type::Named(ref name) => {
-            if let Some(&subst) = dict.qnames.get(name) {
-                return Arc::new(Type::Subst(subst));
-            }
-
-            // Always return here so we don't add something to the dictionary.
-            return compress_dedup(ty, name, dict, compress_fully_qualified_name, Type::Named)
+            // NOTE: Always return here so we don't add something to the dictionary.
+            //       Compressing the qname has already taken care of that.
+            return dedup(ty, name, compress_fully_qualified_name(name, dict), Type::Named)
         }
-
         Type::Ref(ref inner) => {
-            compress_dedup(ty, inner, dict, compress_type, Type::Ref)
+            dedup(ty, inner, compress_type(inner, dict), Type::Ref)
         }
         Type::RefMut(ref inner) => {
-            compress_dedup(ty, inner, dict, compress_type, Type::RefMut)
+            dedup(ty, inner, compress_type(inner, dict), Type::RefMut)
         }
         Type::RawPtrConst(ref inner) => {
-            compress_dedup(ty, inner, dict, compress_type, Type::RawPtrConst)
+            dedup(ty, inner, compress_type(inner, dict), Type::RawPtrConst)
         }
         Type::RawPtrMut(ref inner) => {
-            compress_dedup(ty, inner, dict, compress_type, Type::RawPtrMut)
+            dedup(ty, inner, compress_type(inner, dict), Type::RawPtrMut)
         }
         Type::Array(opt_size, ref inner) => {
-            compress_dedup(ty, inner, dict, compress_type, |inner| Type::Array(opt_size, inner))
+            dedup(ty, inner, compress_type(inner, dict), |inner| Type::Array(opt_size, inner))
         }
         Type::Tuple(ref tys) => {
-            let new_tys: Vec<_> = tys.iter().map(|t| {
-                compress_type(t, dict)
-            }).collect();
-
-            if new_tys.iter().zip(tys.iter()).all(|(t1, t2)| Arc::ptr_eq(t1, t2)) {
-                ty.clone()
-            } else {
-                Arc::new(Type::Tuple(new_tys))
-            }
+            let compressed_tys: Vec<_> = tys.iter().map(|t| compress_type(t, dict)).collect();
+            dedup(ty, tys, compressed_tys, Type::Tuple)
         }
         Type::Fn {
-            ref return_type,
-            ref params,
             is_unsafe,
             abi,
+            ref params,
+            ref return_type,
         } => {
-            let params = params.iter().map(|t| compress_type(t, dict)).collect();
-            let return_type = return_type.as_ref().map(|t| compress_type(t, dict));
+            let compressed_params: Vec<_> = params.iter().map(|t| compress_type(t, dict)).collect();
+            let compressed_return_type = return_type.as_ref().map(|t| compress_type(t, dict));
 
-            Arc::new(Type::Fn {
-                return_type,
-                params,
-                is_unsafe,
-                abi,
-            })
+            if compressed_params.same_as(params) &&
+               compressed_return_type.same_as(return_type) {
+                ty.clone()
+            } else {
+                Arc::new(Type::Fn {
+                    is_unsafe,
+                    abi,
+                    params: compressed_params,
+                    return_type: compressed_return_type,
+                })
+            }
         }
-
         Type::Subst(_) => {
             unreachable!()
         }
@@ -248,24 +312,19 @@ fn compress_type(ty: &Arc<Type>, dict: &mut Dictionary) -> Arc<Type> {
     compressed
 }
 
-fn compress_dedup<T, T2, C, M>(val: &Arc<T2>,
-                               inner: &Arc<T>,
-                               dict: &mut Dictionary,
-                               compress: C,
-                               make: M)
-                               -> Arc<T2>
-    where C: FnOnce(&Arc<T>, &mut Dictionary) -> Arc<T>,
-          M: FnOnce(Arc<T>) -> T2
+fn dedup<T, I: Same, M>(outer: &Arc<T>,
+                        inner: &I,
+                        compressed_inner: I,
+                        make: M)
+                        -> Arc<T>
+    where M: FnOnce(I) -> T
 {
-    let compressed = compress(inner, dict);
-
-    if Arc::ptr_eq(inner, &compressed) {
-        val.clone()
+    if compressed_inner.same_as(inner) {
+        outer.clone()
     } else {
-        Arc::new(make(compressed))
+        Arc::new(make(compressed_inner))
     }
 }
-
 
 #[cfg(test)]
 mod tests {

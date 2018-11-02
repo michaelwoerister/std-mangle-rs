@@ -38,13 +38,9 @@ impl Arbitrary for GenericArgumentList {
 
         if size > 0 {
             let g = &mut StdThreadGen::new(size);
-            GenericArgumentList {
-                params: Arbitrary::arbitrary(g),
-            }
+            GenericArgumentList(Arbitrary::arbitrary(g))
         } else {
-            GenericArgumentList {
-                params: vec![],
-            }
+            GenericArgumentList(vec![])
         }
     }
 }
@@ -66,8 +62,17 @@ impl Arbitrary for Type {
                 };
 
                 Type::Array(len, Arbitrary::arbitrary(g))
-            },
-            6 => Type::Tuple(Arbitrary::arbitrary(g)),
+            }
+            6 => {
+                let components = loop {
+                    let components: Vec<Arc<Type>> = Arbitrary::arbitrary(g);
+                    if components.len() > 0 {
+                        break components;
+                    }
+                };
+
+                Type::Tuple(components)
+            }
             7 => Type::Named(Arc::new(Arbitrary::arbitrary(g))),
             8 => Type::GenericParam(gen_valid_ident(g)),
             9 => {

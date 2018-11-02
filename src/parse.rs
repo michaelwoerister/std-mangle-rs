@@ -247,9 +247,7 @@ impl<'input> Parser<'input> {
 
         self.pos += 1;
 
-        Ok(GenericArgumentList {
-            params: args,
-        })
+        Ok(GenericArgumentList(args))
     }
 
     fn parse_type(&mut self) -> Result<Arc<Type>, String> {

@@ -8,13 +8,17 @@ extern crate rand;
 extern crate unicode_xid;
 
 pub mod ast;
+
 pub mod compress;
-pub mod debug;
 pub mod decompress;
+
+pub mod pretty;
 pub mod mangle;
 pub mod parse;
-pub mod pretty;
 pub mod direct_demangle;
+
+mod same;
+mod debug;
 
 #[cfg(test)]
 mod generated_tests;

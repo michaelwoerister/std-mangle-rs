@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::ops::Deref;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum IdentTag {
@@ -49,9 +50,7 @@ pub enum FullyQualifiedName {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-pub struct GenericArgumentList {
-    pub params: Vec<Arc<Type>>,
-}
+pub struct GenericArgumentList(pub Vec<Arc<Type>>);
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum Type {
@@ -128,15 +127,21 @@ impl Ident {
 
 impl GenericArgumentList {
     pub fn new_empty() -> GenericArgumentList {
-        GenericArgumentList {
-            params: vec![],
-        }
+        GenericArgumentList(vec![])
     }
 
     pub fn ptr_eq(&self, other: &GenericArgumentList) -> bool {
-        assert_eq!(self.params.len(), other.params.len());
+        assert_eq!(self.len(), other.len());
 
-        self.params.iter().zip(other.params.iter())
+        self.iter().zip(other.iter())
             .all(|(a, b)| Arc::ptr_eq(a, b))
+    }
+}
+
+impl Deref for GenericArgumentList {
+    type Target = [Arc<Type>];
+
+    fn deref(&self) -> &[Arc<Type>] {
+        &self.0[..]
     }
 }

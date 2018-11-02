@@ -85,9 +85,9 @@ impl FullyQualifiedName {
 impl GenericArgumentList {
 
     pub fn pretty_print(&self, out: &mut String) {
-        if self.params.len() > 0 {
+        if self.len() > 0 {
             out.push('<');
-            for param in &self.params {
+            for param in self.iter() {
                 param.pretty_print(out);
                 out.push(',');
             }

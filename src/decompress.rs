@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct Decompress {
-    qnames: HashMap<Subst, Arc<FullyQualifiedName>>,
     name_prefixes: HashMap<Subst, Arc<NamePrefix>>,
+    qnames: HashMap<Subst, Arc<FullyQualifiedName>>,
     types: HashMap<Subst, Arc<Type>>,
 
     subst_counter: usize,
@@ -82,11 +82,31 @@ impl Decompress {
                     })
                 };
 
-                self.alloc_subst(&decompressed, |this| &mut this.qnames);
+                if !args.is_empty() {
+                    self.alloc_subst(&decompressed, |this| &mut this.qnames);
+                }
+
                 decompressed
             }
+
             FullyQualifiedName::Subst(ref subst) => {
-                self.qnames[subst].clone()
+                if let Some(qname) = self.qnames.get(subst) {
+                    qname.clone()
+                } else if let Some(prefix) = self.name_prefixes.get(subst) {
+                    Arc::new(FullyQualifiedName::Name {
+                        name: prefix.clone(),
+                        args: GenericArgumentList::new_empty(),
+                    })
+                } else if let Some(ty) = self.types.get(subst) {
+                    Arc::new(FullyQualifiedName::Name {
+                        name: Arc::new(NamePrefix::InherentImpl {
+                            self_type: ty.clone(),
+                        }),
+                        args: GenericArgumentList::new_empty(),
+                    })
+                } else {
+                    unreachable!()
+                }
             }
         }
     }
@@ -115,13 +135,13 @@ impl Decompress {
             NamePrefix::InherentImpl { ref self_type } => {
                 let decompressed_self_type = self.decompress_type(self_type);
 
-                if Arc::ptr_eq(self_type, &decompressed_self_type) {
+                return if Arc::ptr_eq(self_type, &decompressed_self_type) {
                     name_prefix.clone()
                 } else {
                     Arc::new(NamePrefix::InherentImpl {
                         self_type: decompressed_self_type,
                     })
-                }
+                };
             }
             NamePrefix::Node { ref prefix, ref ident } => {
                 let decompressed_prefix = self.decompress_name_prefix(prefix);
@@ -136,12 +156,24 @@ impl Decompress {
                 }
             }
             NamePrefix::Subst(ref subst) => {
-                // Return here! Don't add anything to the dictionary.
-                return self.name_prefixes[subst].clone();
+                return if let Some(prefix) = self.name_prefixes.get(subst) {
+                    prefix.clone()
+                } else if let Some(ty) = self.types.get(subst) {
+                    Arc::new(NamePrefix::InherentImpl {
+                        self_type: ty.clone()
+                    })
+                } else if let Some(qname) = self.qnames.get(subst) {
+                    Arc::new(NamePrefix::InherentImpl {
+                        self_type: Arc::new(Type::Named(qname.clone()))
+                    })
+                } else {
+                    unreachable!()
+                };
             }
         };
 
         self.alloc_subst(&decompressed, |this| &mut this.name_prefixes);
+
         decompressed
     }
 
@@ -149,21 +181,15 @@ impl Decompress {
                                          compressed: &GenericArgumentList)
                                          -> GenericArgumentList
     {
-        let decompressed_params = compressed
-            .params
-            .iter()
-            .map(|t| self.decompress_type(t))
-            .collect();
-
-        GenericArgumentList {
-            params: decompressed_params
-        }
+        GenericArgumentList(compressed.iter()
+                                      .map(|t| self.decompress_type(t))
+                                      .collect())
     }
 
     fn decompress_type(&mut self, compressed: &Arc<Type>) -> Arc<Type> {
-
         let decompressed = match **compressed {
-            Type::BasicType(_) => {
+            Type::BasicType(_) |
+            Type::GenericParam(_) => {
                 // Exit here!
                 return compressed.clone();
             }
@@ -235,9 +261,6 @@ impl Decompress {
                     Arc::new(Type::Named(decompressed_qname))
                 };
             }
-            Type::GenericParam(_) => {
-                return compressed.clone();
-            }
             Type::Fn { is_unsafe, abi, ref return_type, ref params } => {
                 let decompressed_params: Vec<_> = params
                     .iter()
@@ -267,13 +290,17 @@ impl Decompress {
                 }
             }
             Type::Subst(ref subst) => {
-                // Review with respect to Named variant / parsing? compression?
-                // return self.types[subst].clone();
-
                 return if let Some(t) = self.types.get(subst) {
                     t.clone()
+                } else if let Some(qname) = self.qnames.get(subst) {
+                    Arc::new(Type::Named(qname.clone()))
+                } else if let Some(prefix) = self.name_prefixes.get(subst) {
+                    Arc::new(Type::Named(Arc::new(FullyQualifiedName::Name {
+                        name: prefix.clone(),
+                        args: GenericArgumentList::new_empty(),
+                    })))
                 } else {
-                    Arc::new(Type::Named(self.qnames[subst].clone()))
+                    unreachable!()
                 };
             }
         };

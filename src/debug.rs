@@ -18,6 +18,7 @@ pub fn compare_dictionaries(d1: &[(Subst, String)], d2: &[(Subst, String)]) {
 
     if d1.len() != d2.len() {
         println!("dictionaries differ in length ({} vs {})", d1.len(), d2.len());
+        return
     } else {
         println!("both dictionaries have {} entries", d1.len());
     }
@@ -32,9 +33,5 @@ pub fn compare_dictionaries(d1: &[(Subst, String)], d2: &[(Subst, String)]) {
     }
 
     println!("dictionaries equal!");
-
-    // for (k, v) in d1 {
-    //     println!("{:?} => {}", k, v);
-    // }
 }
 
