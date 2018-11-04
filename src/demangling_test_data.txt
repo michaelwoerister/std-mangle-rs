@@ -231,6 +231,20 @@ _RNXlN7foo_xxx3BarIxEE4quuxF1_Cs_IcEE <i32 as foo[xxx]::Bar<i64>>::quux::{closur
 
 ## Compression
 
+# Progressive type compression
+_RN7std_xxx3fooITNS_3BarES1_ES2_EE std[xxx]::foo<(std[xxx]::Bar,std[xxx]::Bar),(std[xxx]::Bar,std[xxx]::Bar)>
+
+# Compressed name prefix as qname
+_RNXN7std_xxx3foo3FooES0_3barFE <std[xxx]::foo::Foo as std[xxx]::foo>::bar
+
+# Compressed name prefix as type
+_RN7std_xxx3fooFIS0_EE std[xxx]::foo<std[xxx]::foo>
+
+# Compressed name prefix as type name prefix
+_RN7std_xxx3fooFINS0_3BarEEE std[xxx]::foo<std[xxx]::foo::Bar>
+
 # Compressed basic type crate root
+_RN7std_xxx3fooFINMa3barINS0_3BARSEEEEE std[xxx]::foo<i8::bar<std[xxx]::foo::BAR>>
 
 # Compressed named type crate root
+_RN7std_xxx3fooFINMNS_4QUUXE3barINS0_3BARSEEEEE std[xxx]::foo<std[xxx]::QUUX::bar<std[xxx]::foo::BAR>>

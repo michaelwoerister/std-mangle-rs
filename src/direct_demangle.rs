@@ -86,7 +86,7 @@ impl<'input> Demangler<'input> {
                     // whole output generated for this name.
                 }
 
-                assert_eq!(self.cur(), b'E');
+                assert_eq!(self.cur() as char, 'E');
                 self.pos += 1;
             }
 
