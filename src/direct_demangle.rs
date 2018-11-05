@@ -1,3 +1,4 @@
+use ast::{NUMERIC_DISAMBIGUATOR_RADIX, SUBST_RADIX};
 use std::io::Write;
 use std::str;
 
@@ -53,16 +54,30 @@ impl<'input> Demangler<'input> {
         self.dict.push((start, end));
     }
 
-    fn parse_decimal(&mut self) -> Result<usize, String> {
-        if !self.cur().is_ascii_digit() {
-            return Err(format!("expected digit, found {:?}", self.cur() as char));
+    fn parse_number(&mut self, radix: u8) -> Result<u64, String> {
+        let to_digit = |byte| {
+            let value = match byte {
+                b'0' ..= b'9' => byte - b'0',
+                b'a' ..= b'z' => (byte - b'a') + 10,
+                b'A' ..= b'Z' => (byte - b'A') + 10,
+                _ => return None,
+            };
+
+            if value < radix {
+                Some(value)
+            } else {
+                None
+            }
+        };
+
+        if to_digit(self.cur()).is_none() {
+            return Err(format!("expected base-{} digit, found {:?}", radix, self.cur() as char));
         }
 
-        let mut value = (self.cur() - b'0') as usize;
-        self.pos += 1;
-        while self.cur().is_ascii_digit() {
-            let digit = self.cur() - b'0';
-            value = value * 10 + digit as usize;
+        let mut value = 0;
+
+        while let Some(digit) = to_digit(self.cur()) {
+            value = value * (radix as u64) + digit as u64;
             self.pos += 1;
         }
 
@@ -107,7 +122,7 @@ impl<'input> Demangler<'input> {
             return Err(format!("idents must start with length-spec; found '{}'", self.cur() as char));
         }
 
-        let ident_len = self.parse_decimal()?;
+        let ident_len = self.parse_number(10)? as usize;
         let ident_start = self.pos;
 
         self.pos += ident_len;
@@ -135,7 +150,7 @@ impl<'input> Demangler<'input> {
             let index = if self.cur() == b'_' {
                 2
             } else {
-                self.parse_decimal()? + 3
+                self.parse_number(NUMERIC_DISAMBIGUATOR_RADIX)? + 3
             };
             assert_eq!(self.cur(), b'_');
             self.pos += 1;
@@ -182,7 +197,7 @@ impl<'input> Demangler<'input> {
 
             c if c.is_ascii_digit() => {
 
-                let len = self.parse_decimal()?;
+                let len = self.parse_number(10)? as usize;
                 let name_and_dis = &self.input[self.pos .. self.pos + len];
 
                 if let Some(sep) = name_and_dis.iter().rposition(|&c| c == b'_') {
@@ -275,7 +290,7 @@ impl<'input> Demangler<'input> {
             b'A' => {
                 self.out.push(b'[');
                 let len = if self.cur().is_ascii_digit() {
-                    Some(self.parse_decimal()?)
+                    Some(self.parse_number(10)?)
                 } else {
                     None
                 };
@@ -398,7 +413,7 @@ impl<'input> Demangler<'input> {
         let index = if self.cur() == b'_' {
             0
         } else {
-            self.parse_decimal()? + 1
+            self.parse_number(SUBST_RADIX)? as usize + 1
         };
 
         assert_eq!(self.cur(), b'_');
@@ -446,7 +461,7 @@ mod tests {
 
     fn to_debug_dictionary(input: &[u8], dict: &[(usize, usize)]) -> Vec<(Subst, String)> {
         dict.iter().enumerate().map(|(i, &(start, end))| {
-            (Subst(i), String::from_utf8(input[start .. end].to_owned()).unwrap())
+            (Subst(i as u64), String::from_utf8(input[start .. end].to_owned()).unwrap())
         }).collect()
     }
 

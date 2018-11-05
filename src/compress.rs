@@ -8,7 +8,7 @@ pub(crate) struct Dictionary {
     prefixes: HashMap<Arc<NamePrefix>, Subst>,
     qnames: HashMap<Arc<QName>, Subst>,
     types: HashMap<Arc<Type>, Subst>,
-    subst_counter: usize,
+    subst_counter: u64,
 }
 
 impl Dictionary {

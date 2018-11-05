@@ -22,12 +22,12 @@ impl Ident {
             IdentTag::Function => {
                 out.push_str(&self.ident);
 
-                if self.dis != 0 {
-                    write!(out, "'{}", self.dis + 1).unwrap();
+                if self.dis.0 != 0 {
+                    write!(out, "'{}", self.dis.0 + 1).unwrap();
                 }
             }
             IdentTag::Closure => {
-                write!(out, "{{closure}}'{}", self.dis + 1).unwrap();
+                write!(out, "{{closure}}'{}", self.dis.0 + 1).unwrap();
             }
         }
     }

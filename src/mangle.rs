@@ -12,14 +12,11 @@ impl IdentTag {
     }
 }
 
-impl Ident {
+impl NumericDisambiguator {
     pub fn mangle(&self, out: &mut String) {
-        let len = self.ident.len();
-        write!(out, "{}{}", len, self.ident).unwrap();
+        let NumericDisambiguator(index) = *self;
 
-        self.tag.mangle(out);
-
-        match self.dis {
+        match index {
             0 => {
                 // Don't print anything
             }
@@ -28,9 +25,20 @@ impl Ident {
                 out.push_str("s_");
             }
             index => {
-                write!(out, "s{}_", index - 2).unwrap();
+                write!(out, "s{:x}_", index - 2).unwrap();
             }
         }
+    }
+}
+
+
+impl Ident {
+    pub fn mangle(&self, out: &mut String) {
+        let len = self.ident.len();
+        write!(out, "{}{}", len, self.ident).unwrap();
+
+        self.tag.mangle(out);
+        self.dis.mangle(out);
     }
 }
 
@@ -39,7 +47,7 @@ impl Subst {
         if self.0 == 0 {
             out.push_str("S_");
         } else {
-            write!(out, "S{}_", self.0 - 1).unwrap();
+            write!(out, "S{:x}_", self.0 - 1).unwrap();
         }
     }
 }

@@ -20,6 +20,16 @@ impl Arbitrary for IdentTag {
     }
 }
 
+impl Arbitrary for NumericDisambiguator {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        match g.next_u32() % 2 {
+            0 => NumericDisambiguator(g.next_u32() as u64 % 9),
+            1 => NumericDisambiguator(100 + g.next_u32() as u64 % 100),
+            _ => unreachable!(),
+        }
+    }
+}
+
 impl Arbitrary for Ident {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
 
@@ -54,7 +64,7 @@ impl Arbitrary for Type {
             3 => Type::RawPtrConst(Arc::new(Arbitrary::arbitrary(g))),
             4 => Type::RawPtrMut(Arc::new(Arbitrary::arbitrary(g))),
             5 => {
-                let len = (g.next_u32() % 10000) as usize;
+                let len = (g.next_u32() % 10000) as u64;
                 let len = if len >= 5000 {
                     None
                 } else {

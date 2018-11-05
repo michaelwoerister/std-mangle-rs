@@ -9,7 +9,7 @@ pub struct Decompress {
     qnames: HashMap<Subst, Arc<QName>>,
     types: HashMap<Subst, Arc<Type>>,
 
-    subst_counter: usize,
+    subst_counter: u64,
 }
 
 

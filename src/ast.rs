@@ -9,15 +9,22 @@ pub enum IdentTag {
     Closure,
 }
 
+pub const NUMERIC_DISAMBIGUATOR_RADIX: u8 = 16;
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
+pub struct NumericDisambiguator(pub u64);
+
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Ident {
     pub ident: String,
     pub tag: IdentTag,
-    pub dis: u32,
+    pub dis: NumericDisambiguator,
 }
 
+pub const SUBST_RADIX: u8 = 16;
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
-pub struct Subst(pub usize);
+pub struct Subst(pub u64);
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum NamePrefix {
@@ -59,7 +66,7 @@ pub enum Type {
     RefMut(Arc<Type>),
     RawPtrConst(Arc<Type>),
     RawPtrMut(Arc<Type>),
-    Array(Option<usize>, Arc<Type>),
+    Array(Option<u64>, Arc<Type>),
     Tuple(Vec<Arc<Type>>),
     Named(Arc<QName>),
     GenericParam(String), // Must support hygiene?
@@ -113,16 +120,6 @@ pub enum BasicType {
 pub struct Symbol {
     pub name: Arc<QName>,
     // pub instantiating_crate: Arc<NamePrefix>,
-}
-
-impl Ident {
-    pub fn new(ident: &str, tag: IdentTag, dis: u32) -> Ident {
-        Ident {
-            ident: ident.into(),
-            tag,
-            dis,
-        }
-    }
 }
 
 impl GenericArgumentList {

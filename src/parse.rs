@@ -50,8 +50,68 @@ impl<'input> Parser<'input> {
         Ok(())
     }
 
+    fn parse_opt_numeric_disambiguator(&mut self) -> Result<NumericDisambiguator, String> {
+        let index = if self.cur() != b's' {
+            0
+        } else {
+            self.pos += 1;
+
+            if self.cur() == b'_' {
+                self.pos += 1;
+                1
+            } else {
+                let n = self.parse_underscore_terminated_number(NUMERIC_DISAMBIGUATOR_RADIX)?;
+                n + 2
+            }
+        };
+
+        Ok(NumericDisambiguator(index))
+    }
+
+    fn parse_underscore_terminated_number(&mut self, radix: u8) -> Result<u64, String> {
+
+        let value = self.parse_number(radix)?;
+
+        if self.cur() != b'_' {
+            return Err(format!("Expected number to be terminated by underscore."))
+        }
+
+        self.pos += 1;
+        Ok(value)
+    }
+
+     fn parse_number(&mut self, radix: u8) -> Result<u64, String> {
+        let to_digit = |byte| {
+            let value = match byte {
+                b'0' ..= b'9' => byte - b'0',
+                b'a' ..= b'z' => (byte - b'a') + 10,
+                b'A' ..= b'Z' => (byte - b'A') + 10,
+                _ => return None,
+            };
+
+            if value < radix {
+                Some(value)
+            } else {
+                None
+            }
+        };
+
+        if to_digit(self.cur()).is_none() {
+            return Err(format!("expected base-{} digit, found {:?}", radix, self.cur_char()));
+        }
+
+        let mut value = 0;
+
+        while let Some(digit) = to_digit(self.cur()) {
+            value = value * (radix as u64) + digit as u64;
+            self.pos += 1;
+        }
+
+        Ok(value)
+    }
+
     fn parse_len_prefixed_ident(&mut self) -> Result<Ident, String> {
-        let len = self.parse_decimal()?;
+        let len = self.parse_number(10)? as usize;
         let ident = String::from_utf8(self.input[self.pos .. self.pos + len].to_owned())
                            .unwrap();
         self.pos += len;
@@ -74,47 +134,13 @@ impl<'input> Parser<'input> {
             }
         };
 
-        let dis = if self.cur() == b's' {
-            self.pos += 1;
-
-            let dis = if self.cur() == b'_' {
-                1
-            } else {
-                self.parse_decimal()? + 2
-            };
-
-            if self.cur() != b'_' {
-                return Err(format!("expected '_', found '{}'", self.cur() as char));
-            }
-
-            self.pos += 1;
-
-            dis
-        } else {
-            0
-        };
+        let dis = self.parse_opt_numeric_disambiguator()?;
 
         Ok(Ident {
             ident,
             tag,
-            dis: dis as u32,
+            dis,
         })
-    }
-
-    fn parse_decimal(&mut self) -> Result<usize, String> {
-        if !self.cur().is_ascii_digit() {
-            return Err(format!("expected digit, found {:?}", self.cur_char()));
-        }
-
-        let mut value = (self.cur() - b'0') as usize;
-        self.pos += 1;
-        while self.cur().is_ascii_digit() {
-            let digit = self.cur() - b'0';
-            value = value * 10 + digit as usize;
-            self.pos += 1;
-        }
-
-        Ok(value)
     }
 
     fn parse_qname(&mut self) -> Result<Arc<QName>, String> {
@@ -157,17 +183,12 @@ impl<'input> Parser<'input> {
         self.pos += 1;
 
         let index = if self.cur() == b'_' {
+            self.pos += 1;
             0
         } else {
-            let n = self.parse_decimal()?;
+            let n = self.parse_underscore_terminated_number(SUBST_RADIX)?;
             n + 1
         };
-
-        if self.cur() != b'_' {
-            return Err(format!("expected '_', found {:?}", self.cur_char()));
-        }
-
-        self.pos += 1;
 
         Ok(Subst(index))
     }
@@ -278,7 +299,7 @@ impl<'input> Parser<'input> {
 
             b'A' => {
                 let len = if self.cur().is_ascii_digit() {
-                    Some(self.parse_decimal()?)
+                    Some(self.parse_number(10)?)
                 } else {
                     None
                 };
