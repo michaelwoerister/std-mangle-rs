@@ -75,11 +75,14 @@ _RN16mycrate_abcd123f3foos0_3BARSE mycrate[abcd123f]::foo'3::BAR
 # Static with closure in path
 _RN16mycrate_abcd123f3fooF1_C4QUUXSE mycrate[abcd123f]::foo::{closure}'1::QUUX
 
+# Static with generic inherent impl in path
+_RNMN7std_xxx3FooIG1TEEE4quuxF3BARSE std[xxx]::Foo<T>::quux::BAR
+
 # Static with trait impl in path
 _RNXiN16mycrate_abcd123f9SomeTraitE4quuxF3FOOSE <isize as mycrate[abcd123f]::SomeTrait>::quux::FOO
 
 # Static with specialized trait impl in path
-...
+_RNXiN16mycrate_abcd123f9SomeTraitEs_4quuxF3FOOSE <isize as mycrate[abcd123f]::SomeTrait>'2::quux::FOO
 
 
 ## Non-generic functions
@@ -212,6 +215,7 @@ _RNMN7std_xxx3Foos_E4quuxFE std[xxx]::Foo'2::quux
 ### Items in specialized trait impls
 
 
+
 ## Closures
 
 # Closure in free-standing function
@@ -226,11 +230,8 @@ _RN7std_xxx3fooF1_Cs0_1_CE std[xxx]::foo::{closure}'3::{closure}'1
 # Closure in trait method
 _RNXlN7foo_xxx3BarIxEE4quuxF1_Cs_IcEE <i32 as foo[xxx]::Bar<i64>>::quux::{closure}'2<char>
 
-## Shims
-
 
 ## Compression
-
 
 # Compressed name prefix as qname
 _RNXN7std_xxx3foo3FooES0_3barFE <std[xxx]::foo::Foo as std[xxx]::foo>::bar

@@ -117,6 +117,22 @@ impl<'input> Demangler<'input> {
         Ok(())
     }
 
+    fn parse_opt_numeric_disambiguator(&mut self) -> Result<u64, String> {
+        if self.cur() == b's' {
+            self.pos += 1;
+            let index = if self.cur() == b'_' {
+                2
+            } else {
+                self.parse_number(NUMERIC_DISAMBIGUATOR_RADIX)? + 3
+            };
+            assert_eq!(self.cur(), b'_');
+            self.pos += 1;
+            Ok(index)
+        } else {
+            Ok(1)
+        }
+    }
+
     fn demangle_ident(&mut self) -> Result<(), String> {
         if !self.cur().is_ascii_digit() {
             return Err(format!("idents must start with length-spec; found '{}'", self.cur() as char));
@@ -145,19 +161,7 @@ impl<'input> Demangler<'input> {
             }
         }
 
-        let index = if self.cur() == b's' {
-            self.pos += 1;
-            let index = if self.cur() == b'_' {
-                2
-            } else {
-                self.parse_number(NUMERIC_DISAMBIGUATOR_RADIX)? + 3
-            };
-            assert_eq!(self.cur(), b'_');
-            self.pos += 1;
-            index
-        } else {
-            1
-        };
+        let index = self.parse_opt_numeric_disambiguator()?;
 
         if index > 1 || always_print_dis {
             write!(self.out, "'{}", index).unwrap();
@@ -185,6 +189,13 @@ impl<'input> Demangler<'input> {
                 self.out.extend_from_slice(b" as ");
                 self.demangle_fully_qualified_name()?;
                 self.out.push(b'>');
+
+                let index = self.parse_opt_numeric_disambiguator()?;
+
+                if index > 1 {
+                    write!(self.out, "'{}", index).unwrap();
+                }
+
                 true
             }
 

@@ -35,7 +35,7 @@ pub enum NamePrefix {
     TraitImpl {
         self_type: Arc<Type>,
         impled_trait: Arc<QName>,
-        // TODO: bounds
+        dis: NumericDisambiguator,
     },
     InherentImpl {
         self_type: Arc<Type>,

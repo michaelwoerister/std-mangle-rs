@@ -59,10 +59,11 @@ impl NamePrefix {
                 let len = name.len() + dis.len() + 1;
                 write!(out, "{}{}_{}", len, name, dis).unwrap();
             }
-            NamePrefix::TraitImpl { ref self_type, ref impled_trait } => {
+            NamePrefix::TraitImpl { ref self_type, ref impled_trait, dis } => {
                 out.push('X');
                 self_type.mangle(out);
                 impled_trait.mangle(out);
+                dis.mangle(out);
             }
             NamePrefix::InherentImpl { ref self_type } => {
                 out.push('M');

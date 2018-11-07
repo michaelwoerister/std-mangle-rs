@@ -109,7 +109,7 @@ impl Decompress {
             NamePrefix::CrateId { .. } => {
                 name_prefix.clone()
             }
-            NamePrefix::TraitImpl { ref self_type, ref impled_trait } => {
+            NamePrefix::TraitImpl { ref self_type, ref impled_trait, dis } => {
                 let decompressed_self_type = self.decompress_type(self_type);
                 let decompressed_impled_trait = self.decompress_qname(impled_trait);
 
@@ -120,6 +120,7 @@ impl Decompress {
                     Arc::new(NamePrefix::TraitImpl {
                         self_type: decompressed_self_type,
                         impled_trait: decompressed_impled_trait,
+                        dis,
                     })
                 }
             }

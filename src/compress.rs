@@ -177,7 +177,7 @@ fn compress_name_prefix(name_prefix: &Arc<NamePrefix>, dict: &mut Dictionary) ->
             // We cannot compress them, just clone the reference to the node
             name_prefix.clone()
         }
-        NamePrefix::TraitImpl { ref self_type, ref impled_trait } => {
+        NamePrefix::TraitImpl { ref self_type, ref impled_trait, dis } => {
             let compressed_self_type = compress_type(self_type, dict);
             let compressed_impled_trait = compress_qname(impled_trait, dict);
 
@@ -189,6 +189,7 @@ fn compress_name_prefix(name_prefix: &Arc<NamePrefix>, dict: &mut Dictionary) ->
                 Arc::new(NamePrefix::TraitImpl {
                     self_type: compressed_self_type,
                     impled_trait: compressed_impled_trait,
+                    dis,
                 })
             }
         }

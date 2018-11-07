@@ -46,12 +46,16 @@ impl NamePrefix {
             NamePrefix::CrateId { ref name, ref dis } => {
                 write!(out, "{}[{}]", name, dis).unwrap();
             }
-            NamePrefix::TraitImpl { ref self_type, ref impled_trait } => {
+            NamePrefix::TraitImpl { ref self_type, ref impled_trait, dis } => {
                 out.push('<');
                 self_type.pretty_print(out);
                 out.push_str(" as ");
                 impled_trait.pretty_print(out);
                 out.push('>');
+
+                if dis.0 != 0 {
+                    write!(out, "'{}", dis.0 + 1).unwrap();
+                }
             }
             NamePrefix::InherentImpl { ref self_type } => {
                 self_type.pretty_print(out);

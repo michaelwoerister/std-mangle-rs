@@ -205,10 +205,12 @@ impl<'input> Parser<'input> {
 
                 let self_type = self.parse_type()?;
                 let impled_trait = self.parse_qname()?;
+                let dis = self.parse_opt_numeric_disambiguator()?;
 
                 NamePrefix::TraitImpl {
                     self_type,
                     impled_trait,
+                    dis,
                 }
             }
 
