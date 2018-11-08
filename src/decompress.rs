@@ -1,5 +1,3 @@
-
-
 use ast::*;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -11,7 +9,6 @@ pub struct Decompress {
 
     subst_counter: u64,
 }
-
 
 impl Decompress {
 
@@ -127,6 +124,8 @@ impl Decompress {
             NamePrefix::InherentImpl { ref self_type } => {
                 let decompressed_self_type = self.decompress_type(self_type);
 
+                // NOTE: We return here, that is, without allocating a
+                //       substitution.
                 return if Arc::ptr_eq(self_type, &decompressed_self_type) {
                     name_prefix.clone()
                 } else {
@@ -148,6 +147,8 @@ impl Decompress {
                 }
             }
             NamePrefix::Subst(ref subst) => {
+                // NOTE: We return here, that is, without allocating a
+                //       substitution.
                 return if let Some(prefix) = self.name_prefixes.get(subst) {
                     prefix.clone()
                 } else if let Some(ty) = self.types.get(subst) {
