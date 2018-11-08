@@ -2,6 +2,7 @@
 use ast::*;
 use std::sync::Arc;
 use std::str;
+use error::expected;
 
 pub struct Parser<'input> {
     input: &'input [u8],
@@ -73,7 +74,7 @@ impl<'input> Parser<'input> {
         let value = self.parse_number(radix)?;
 
         if self.cur() != b'_' {
-            return Err(format!("Expected number to be terminated by underscore."))
+            return expected("_", self.cur(), "parsing", "underscored-terminated number");
         }
 
         self.pos += 1;
@@ -169,15 +170,15 @@ impl<'input> Parser<'input> {
                 let subst = self.parse_subst()?;
                 Ok(Arc::new(QName::Subst(subst)))
             }
-            _ => {
-                return Err(format!("Expected 'N' or 'S', found {:?}", self.cur_char()));
+            c => {
+                return expected("NS", c, "parsing", "<qualified-name>");
             }
         }
     }
 
     fn parse_subst(&mut self) -> Result<Subst, String> {
         if self.cur() != b'S' {
-            return Err(format!("expected 'S', found {:?}", self.cur_char()));
+            return expected("S", self.cur(), "parsing", "<substitution>");
         }
 
         self.pos += 1;

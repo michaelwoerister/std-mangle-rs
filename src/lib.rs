@@ -17,6 +17,7 @@ pub mod mangle;
 pub mod parse;
 pub mod direct_demangle;
 
+mod error;
 mod same;
 
 #[cfg(test)]
