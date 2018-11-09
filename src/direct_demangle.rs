@@ -1,6 +1,7 @@
 use ast::{NUMERIC_DISAMBIGUATOR_RADIX, SUBST_RADIX};
 use std::io::Write;
 use std::str;
+use error::expected;
 
 pub struct Demangler<'input> {
     pos: usize,
@@ -101,7 +102,10 @@ impl<'input> Demangler<'input> {
                     // whole output generated for this name.
                 }
 
-                assert_eq!(self.cur() as char, 'E');
+                if self.cur() != b'E' {
+                    return expected("E", self.cur(), "demangling", "<qualified-name>");
+                }
+
                 self.pos += 1;
             }
 
@@ -110,7 +114,7 @@ impl<'input> Demangler<'input> {
             }
 
             c => {
-                return Err(format!("Expected 'S' or 'N', found '{}'", c as char));
+                return expected("NS", c, "demangling", "<qualified_name>");
             }
         }
 
@@ -125,7 +129,11 @@ impl<'input> Demangler<'input> {
             } else {
                 self.parse_number(NUMERIC_DISAMBIGUATOR_RADIX)? + 3
             };
-            assert_eq!(self.cur(), b'_');
+
+            if self.cur() != b'_' {
+                return expected("_", self.cur(), "demangling", "<underscored-terminated number>");
+            }
+
             self.pos += 1;
             Ok(index)
         } else {
@@ -135,7 +143,7 @@ impl<'input> Demangler<'input> {
 
     fn demangle_ident(&mut self) -> Result<(), String> {
         if !self.cur().is_ascii_digit() {
-            return Err(format!("idents must start with length-spec; found '{}'", self.cur() as char));
+            return expected("#", self.cur(), "demangling", "<ident>");
         }
 
         let ident_len = self.parse_number(10)? as usize;
@@ -227,7 +235,7 @@ impl<'input> Demangler<'input> {
             }
 
             c => {
-                return Err(format!("expected 'S', 'X', or digit, found {:?}", c as char));
+                return expected("SX#", c, "demangling", "<name-prefix>");
             }
         };
 
@@ -349,7 +357,10 @@ impl<'input> Demangler<'input> {
                     self.demangle_type()?;
                 }
 
-                assert_eq!(self.cur(), b'E');
+                if self.cur() != b'E' {
+                    return expected("E", self.cur(), "demangling", "<fn-type>");
+                }
+
                 // Skip the 'E'
                 self.pos += 1;
             }
@@ -357,7 +368,7 @@ impl<'input> Demangler<'input> {
             b'G' => {
                 self.demangle_ident()?;
                 if self.cur() != b'E' {
-                    return Err(format!("While demangling generic parameter name: Expected 'E', found {:?}", self.cur() as char));
+                    return expected("E", self.cur(), "demangling", "<generic-param-name>");
                 }
                 self.pos += 1;
                 return Ok(());
@@ -400,7 +411,7 @@ impl<'input> Demangler<'input> {
                 self.out.pop();
                 self.out.push(b')');
 
-                assert_eq!(self.cur(), b'E');
+                // Skip the 'E'
                 self.pos += 1;
             }
 
@@ -416,7 +427,7 @@ impl<'input> Demangler<'input> {
 
     fn demangle_subst(&mut self) -> Result<(), String> {
         if self.cur() != b'S' {
-            return Err(format!("while demangling substitution: expected 'S', found '{}'", self.cur() as char));
+            return expected("S", self.cur(), "demangling", "<substitution>");
         }
 
         self.pos += 1;
@@ -427,10 +438,18 @@ impl<'input> Demangler<'input> {
             self.parse_number(SUBST_RADIX)? as usize + 1
         };
 
-        assert_eq!(self.cur(), b'_');
+        if self.cur() != b'_' {
+            return expected("_", self.cur(), "demangling", "<substitution>");
+        }
+
         self.pos += 1;
 
-        let range_to_copy = self.dict[index];
+        let range_to_copy = if let Some(&index) = self.dict.get(index) {
+            index
+        } else {
+            return Err(format!("Dictionary does not contain substitution index '{}'.",
+                                index));
+        };
         let len = range_to_copy.1 - range_to_copy.0;
 
         let out_start = self.out.len();
@@ -444,7 +463,7 @@ impl<'input> Demangler<'input> {
 
     fn demangle_abi(&mut self) -> Result<(), String> {
         if self.cur() != b'K' {
-            return Err(format!("Expected start of <abi> ('K'), found {:?}", self.cur() as char));
+            return expected("K", self.cur(), "demangling", "<abi>");
         }
 
         self.pos += 1;

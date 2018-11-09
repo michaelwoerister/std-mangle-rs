@@ -74,7 +74,7 @@ impl<'input> Parser<'input> {
         let value = self.parse_number(radix)?;
 
         if self.cur() != b'_' {
-            return expected("_", self.cur(), "parsing", "underscored-terminated number");
+            return expected("_", self.cur(), "parsing", "<underscored-terminated number>");
         }
 
         self.pos += 1;
@@ -158,7 +158,10 @@ impl<'input> Parser<'input> {
                     GenericArgumentList::new_empty()
                 };
 
-                assert_eq!(self.cur(), b'E');
+                if self.cur() != b'E' {
+                    return expected("E", self.cur(), "parsing", "<qualified-name>");
+                }
+
                 self.pos += 1;
 
                 Ok(Arc::new(QName::Name {
@@ -239,8 +242,8 @@ impl<'input> Parser<'input> {
                 }
             }
 
-            _ => {
-                return Err(format!("expected 'S', 'X', or digit, found {:?}", self.cur_char()));
+            c => {
+                return expected("SX#", c, "parsing", "<name-prefix>");
             }
         });
 
@@ -340,7 +343,9 @@ impl<'input> Parser<'input> {
                     None
                 };
 
-                assert_eq!(self.cur(), b'E');
+                if self.cur() != b'E' {
+                    return expected("E", self.cur(), "parsing", "<fn-type>");
+                }
 
                 // Skip the 'E'
                 self.pos += 1;
@@ -356,7 +361,7 @@ impl<'input> Parser<'input> {
             b'G' => {
                 let ident = self.parse_len_prefixed_ident()?;
                 if self.cur() != b'E' {
-                    return Err(format!("While parsing generic parameter name: Expected 'E', found {:?}", self.cur_char()));
+                    return expected("E", self.cur(), "parsing", "<generic-param-name>");
                 }
                 self.pos += 1;
                 Type::GenericParam(ident.ident)
@@ -389,7 +394,8 @@ impl<'input> Parser<'input> {
             }
 
             other => {
-                return Err(format!("expected start of type, found {:?}", other as char));
+                return Err(format!("expected start of type; found '{}' instead; \
+                                    while parsing <type>", other as char));
             }
         };
 
@@ -398,7 +404,7 @@ impl<'input> Parser<'input> {
 
     fn parse_abi(&mut self) -> Result<Abi, String> {
         if self.cur() != b'K' {
-            return Err(format!("Expected start of <abi> ('K'), found {:?}", self.cur_char()));
+            return expected("K", self.cur(), "parsing", "<abi>");
         }
 
         self.pos += 1;
