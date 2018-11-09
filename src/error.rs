@@ -1,4 +1,4 @@
-use std::fmt::Write;
+use std::fmt::{Display, Write};
 
 pub fn expected<T>(
     expected_chars: &str,
@@ -49,4 +49,14 @@ fn char_to_str(c: char) -> String {
         '#' => "digit".to_string(),
         c => format!("'{}'", c),
     }
+}
+
+pub fn version_mismatch<T, V>(actual_version: V, supported_versions: V) -> Result<T, String>
+where
+    V: Display,
+{
+    Err(format!(
+        "Symbol uses encoding version {} but the highest supported version is {}.",
+        actual_version, supported_versions
+    ))
 }

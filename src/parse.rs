@@ -1,5 +1,5 @@
 use ast::*;
-use error::expected;
+use error::{self, expected};
 use std::str;
 use std::sync::Arc;
 
@@ -42,11 +42,17 @@ impl<'input> Parser<'input> {
 
     fn parse_symbol_prefix(&mut self) -> Result<(), String> {
         assert_eq!(self.pos, 0);
+
         if &self.input[0..2] != b"_R" {
             return Err("Not a Rust symbol".to_owned());
         }
 
         self.pos += 2;
+
+        if self.cur().is_ascii_digit() {
+            let encoding_version = self.parse_number(10)? + 1;
+            return error::version_mismatch(encoding_version, 0);
+        }
 
         Ok(())
     }

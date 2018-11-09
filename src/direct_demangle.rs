@@ -1,5 +1,5 @@
 use ast::{NUMERIC_DISAMBIGUATOR_RADIX, SUBST_RADIX};
-use error::expected;
+use error::{self, expected};
 use std::io::Write;
 use std::str;
 
@@ -43,6 +43,12 @@ impl<'input> Demangler<'input> {
         }
 
         self.pos = 2;
+
+        if self.cur().is_ascii_digit() {
+            let encoding_version = self.parse_number(10)? + 1;
+            return error::version_mismatch(encoding_version, 0);
+        }
+
         self.demangle_fully_qualified_name()
     }
 
