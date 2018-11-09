@@ -153,8 +153,10 @@ impl Type {
             Type::Named(ref qname) => {
                 qname.mangle(out);
             }
-            Type::GenericParam(ref name) => {
-                write!(out, "G{}{}E", name.len(), name).unwrap();
+            Type::GenericParam(ref ident) => {
+                out.push('G');
+                ident.mangle(out);
+                out.push('E');
             }
             Type::Fn {
                 ref return_type,

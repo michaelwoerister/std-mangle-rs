@@ -352,7 +352,7 @@ impl<'input> Parser<'input> {
                     return expected("E", self.cur(), "parsing", "<generic-param-name>");
                 }
                 self.pos += 1;
-                Type::GenericParam(ident.ident)
+                Type::GenericParam(ident)
             }
 
             b'N' => {

@@ -69,7 +69,7 @@ pub enum Type {
     Array(Option<u64>, Arc<Type>),
     Tuple(Vec<Arc<Type>>),
     Named(Arc<QName>),
-    GenericParam(String), // Must support hygiene?
+    GenericParam(Ident),
     Fn {
         is_unsafe: bool,
         abi: Abi,

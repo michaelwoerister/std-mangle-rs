@@ -156,6 +156,10 @@ _RN16mycrate_abcd123f3bazFIA777sEE mycrate[abcd123f]::baz<[i16; 777]>
 # Generic function with named type parameter
 _RN16mycrate_abcd123f3bazFIG1TEEE mycrate[abcd123f]::baz<T>
 
+# Generic function with disambiguated, named type parameter
+_RN16mycrate_abcd123f3bazFIG1Ts9_EEE mycrate[abcd123f]::baz<T'12>
+
+
 # Generic function with unicode named type argument
 ...
 

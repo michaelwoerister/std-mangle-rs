@@ -144,8 +144,8 @@ impl Type {
             Type::Named(ref qname) => {
                 qname.pretty_print(out);
             }
-            Type::GenericParam(ref name) => {
-                out.push_str(name);
+            Type::GenericParam(ref ident) => {
+                ident.pretty_print(out);
             }
             Type::Fn {
                 ref return_type,

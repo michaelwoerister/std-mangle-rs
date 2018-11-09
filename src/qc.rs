@@ -76,7 +76,7 @@ impl Arbitrary for Type {
                 Type::Tuple(components)
             }
             7 => Type::Named(Arc::new(Arbitrary::arbitrary(g))),
-            8 => Type::GenericParam(gen_valid_ident(g)),
+            8 => Type::GenericParam(Arbitrary::arbitrary(g)),
             9 => Type::Fn {
                 is_unsafe: Arbitrary::arbitrary(g),
                 abi: Arbitrary::arbitrary(g),
