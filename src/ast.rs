@@ -119,7 +119,7 @@ pub enum BasicType {
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Symbol {
     pub name: Arc<QName>,
-    // pub instantiating_crate: Arc<NamePrefix>,
+    pub instantiating_crate: Option<Arc<NamePrefix>>,
 }
 
 impl GenericArgumentList {

@@ -3,6 +3,8 @@ use error::{self, expected};
 use std::str;
 use std::sync::Arc;
 
+pub const EOT: u8 = 5; // ASCII "end of transmission"
+
 pub struct Parser<'input> {
     input: &'input [u8],
     pos: usize,
@@ -26,14 +28,24 @@ impl<'input> Parser<'input> {
             )
         })?;
 
+        let instantiating_crate = if parser.pos < parser.input.len() {
+            Some(parser.parse_name_prefix()?)
+        } else {
+            None
+        };
+
         Ok(Symbol {
             name: path,
-            // instantiating_crate: panic!(),
+            instantiating_crate,
         })
     }
 
     fn cur(&self) -> u8 {
-        self.input[self.pos]
+        if self.pos < self.input.len() {
+            self.input[self.pos]
+        } else {
+            EOT
+        }
     }
 
     fn cur_char(&self) -> char {
@@ -246,7 +258,7 @@ impl<'input> Parser<'input> {
 
         let mut path = root;
 
-        while self.cur() != b'E' && self.cur() != b'I' {
+        while self.cur() != EOT && self.cur() != b'E' && self.cur() != b'I' {
             let ident = self.parse_len_prefixed_ident()?;
 
             path = Arc::new(NamePrefix::Node {

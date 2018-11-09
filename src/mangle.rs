@@ -238,6 +238,9 @@ impl Symbol {
     pub fn mangle(&self, out: &mut String) {
         out.push_str("_R");
         self.name.mangle(out);
-        // self.instantiating_crate.mangle(out);
+
+        if let Some(ref instantiating_crate) = self.instantiating_crate {
+            instantiating_crate.mangle(out);
+        }
     }
 }

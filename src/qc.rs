@@ -171,10 +171,16 @@ impl Arbitrary for Symbol {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         Symbol {
             name: Arbitrary::arbitrary(g),
-            // instantiating_crate: Arc::new(NamePrefix::CrateId {
-            //         name: gen_valid_ident(g),
-            //         dis: "abc".to_string(), // TODO
-            // }),
+            instantiating_crate: {
+                if g.next_u32() % 3 == 0 {
+                    Some(Arc::new(NamePrefix::CrateId {
+                        name: gen_valid_ident(g),
+                        dis: "abc".to_string(), // TODO
+                    }))
+                } else {
+                    None
+                }
+            },
         }
     }
 }

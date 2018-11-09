@@ -1,5 +1,6 @@
 use ast::{NUMERIC_DISAMBIGUATOR_RADIX, SUBST_RADIX};
 use error::{self, expected};
+use parse::EOT;
 use std::io::Write;
 use std::str;
 
@@ -49,11 +50,24 @@ impl<'input> Demangler<'input> {
             return error::version_mismatch(encoding_version, 0);
         }
 
-        self.demangle_fully_qualified_name()
+        // The qualified name
+        self.demangle_fully_qualified_name()?;
+
+        // The (optional) instantiating crate
+        if self.cur() != EOT {
+            self.out.extend_from_slice(b" @ ");
+            self.demangle_name_prefix()
+        } else {
+            Ok(())
+        }
     }
 
     fn cur(&self) -> u8 {
-        self.input[self.pos]
+        if self.pos < self.input.len() {
+            self.input[self.pos]
+        } else {
+            EOT
+        }
     }
 
     fn alloc_subst(&mut self, start: usize) {
@@ -260,7 +274,7 @@ impl<'input> Demangler<'input> {
             self.alloc_subst(subst_start);
         }
 
-        while self.cur() != b'E' && self.cur() != b'I' {
+        while self.cur() != EOT && self.cur() != b'E' && self.cur() != b'I' {
             self.out.extend_from_slice(b"::");
             self.demangle_ident()?;
             self.alloc_subst(subst_start);

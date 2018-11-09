@@ -229,5 +229,10 @@ impl BasicType {
 impl Symbol {
     pub fn pretty_print(&self, out: &mut String) {
         self.name.pretty_print(out);
+
+        if let Some(ref instantiating_crate) = self.instantiating_crate {
+            out.push_str(" @ ");
+            instantiating_crate.pretty_print(out);
+        }
     }
 }

@@ -13,7 +13,10 @@ pub(crate) fn compress_ext(symbol: &Symbol) -> (Symbol, Compress) {
 
     let compressed = Symbol {
         name: compress.compress_qname(&symbol.name),
-        // instantiating_crate: compress_name_prefix(&symbol.instantiating_crate, &mut dict),
+        instantiating_crate: symbol
+            .instantiating_crate
+            .as_ref()
+            .map(|ic| compress.compress_name_prefix(ic)),
     };
 
     if cfg!(debug_assertions) {

@@ -175,6 +175,10 @@ _RN8std_23453mem8align_ofFINXjN16mycrate_abcd123f9SomeTraitE3fooF3BarEEE std[234
 # Generic function with named type argument defined in specialized trait impl
 ...
 
+# Generic function with instantiating crate suffix
+_RN16mycrate_abcd123f3barFImEE20some_other_crate_xxx mycrate[abcd123f]::bar<u32> @ some_other_crate[xxx]
+
+
 ## Inherent methods
 
 # Inherent non-generic method
@@ -257,3 +261,6 @@ _RN7std_xxx3fooFINS_3barFENS1_3bazFEEE std[xxx]::foo<std[xxx]::bar,std[xxx]::bar
 
 # Progressive type compression
 _RN7std_xxx3fooITNS_3BarES1_ES2_EE std[xxx]::foo<(std[xxx]::Bar,std[xxx]::Bar),(std[xxx]::Bar,std[xxx]::Bar)>
+
+# Substituted instantiating crate suffix
+_RN16mycrate_abcd123f3barFImEES_ mycrate[abcd123f]::bar<u32> @ mycrate[abcd123f]

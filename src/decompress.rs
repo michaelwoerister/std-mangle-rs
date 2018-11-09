@@ -52,9 +52,12 @@ impl Decompress {
     }
 
     fn decompress_symbol(&mut self, symbol: &Symbol) -> Symbol {
-        let decompressed_qname = self.decompress_qname(&symbol.name);
         Symbol {
-            name: decompressed_qname,
+            name: self.decompress_qname(&symbol.name),
+            instantiating_crate: symbol
+                .instantiating_crate
+                .as_ref()
+                .map(|ic| self.decompress_name_prefix(ic)),
         }
     }
 
