@@ -35,7 +35,8 @@ fn emit_test_case_ast(spec_line: &str, title_line: &str, output: &mut impl Write
             .replace(" ", "_")
             .replace("/", "_")
             .replace(",", "_")
-            .replace("-", "_") + "_ast";
+            .replace("-", "_")
+            + "_ast";
 
         writeln!(output, "#[test] #[allow(non_snake_case)] fn {}() {{", title).unwrap();
         writeln!(output, "  let demangled_expected = r#\"{}\"#;", demangled).unwrap();
@@ -72,7 +73,8 @@ fn emit_test_case_direct(spec_line: &str, title_line: &str, output: &mut impl Wr
             .replace(" ", "_")
             .replace("/", "_")
             .replace(",", "_")
-            .replace("-", "_") + "_direct";
+            .replace("-", "_")
+            + "_direct";
 
         writeln!(output, "#[test] #[allow(non_snake_case)] fn {}() {{", title).unwrap();
         writeln!(output, "  let demangled_expected = r#\"{}\"#;", demangled).unwrap();

@@ -3,8 +3,6 @@
 extern crate quickcheck;
 #[cfg(test)]
 extern crate rand;
-#[cfg(test)]
-extern crate unicode_xid;
 
 pub mod ast;
 
@@ -23,5 +21,8 @@ mod same;
 mod debug;
 #[cfg(test)]
 mod generated_tests;
+
 #[cfg(test)]
-mod qc;
+mod quickcheck_testing {
+    mod arbitrary;
+}

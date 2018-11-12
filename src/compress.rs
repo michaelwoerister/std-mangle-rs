@@ -205,9 +205,7 @@ impl Compress {
                     })
                 }
             }
-            Type::GenericParam(_) => {
-                ty.clone()
-            }
+            Type::GenericParam(_) => ty.clone(),
             Type::Subst(_) => unreachable!(),
         };
 

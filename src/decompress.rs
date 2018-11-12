@@ -283,11 +283,10 @@ impl Decompress {
                     _ => unreachable!(),
                 };
 
-                if return_types_same
-                    && decompressed_params
-                        .iter()
-                        .zip(params.iter())
-                        .all(|(a, b)| Arc::ptr_eq(a, b))
+                if return_types_same && decompressed_params
+                    .iter()
+                    .zip(params.iter())
+                    .all(|(a, b)| Arc::ptr_eq(a, b))
                 {
                     compressed.clone()
                 } else {
@@ -299,9 +298,7 @@ impl Decompress {
                     })
                 }
             }
-            Type::GenericParam(_) => {
-                compressed.clone()
-            }
+            Type::GenericParam(_) => compressed.clone(),
             Type::Subst(ref subst) => {
                 return if let Some(t) = self.types.get(subst) {
                     t.clone()

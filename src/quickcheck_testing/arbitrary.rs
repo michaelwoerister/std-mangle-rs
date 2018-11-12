@@ -1,10 +1,8 @@
 use ast::*;
 use quickcheck::{Arbitrary, Gen, StdThreadGen};
 use rand::Rng;
-use std::sync::Arc;
-use unicode_xid::UnicodeXID;
-
 use std::cmp;
+use std::sync::Arc;
 
 impl Arbitrary for IdentTag {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
@@ -24,16 +22,6 @@ impl Arbitrary for NumericDisambiguator {
             0 => NumericDisambiguator(g.next_u32() as u64 % 9),
             1 => NumericDisambiguator(100 + g.next_u32() as u64 % 100),
             _ => unreachable!(),
-        }
-    }
-}
-
-impl Arbitrary for Ident {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        Ident {
-            ident: gen_valid_ident(g),
-            tag: Arbitrary::arbitrary(g),
-            dis: Arbitrary::arbitrary(g),
         }
     }
 }
@@ -66,17 +54,17 @@ impl Arbitrary for Type {
                 Type::Array(len, Arbitrary::arbitrary(g))
             }
             6 => {
-                let components = loop {
-                    let components: Vec<Arc<Type>> = Arbitrary::arbitrary(g);
-                    if components.len() > 0 {
-                        break components;
-                    }
-                };
+                let len = g.gen_range(2, 4);
+                let mut components: Vec<Arc<Type>> = Vec::with_capacity(len);
+
+                for _ in 0..len {
+                    components.push(Arbitrary::arbitrary(g));
+                }
 
                 Type::Tuple(components)
             }
             7 => Type::Named(Arc::new(Arbitrary::arbitrary(g))),
-            8 => Type::GenericParam(Arbitrary::arbitrary(g)),
+            8 => Type::GenericParam(generate_ident(g, Charset::Unicode, 1000)),
             9 => Type::Fn {
                 is_unsafe: Arbitrary::arbitrary(g),
                 abi: Arbitrary::arbitrary(g),
@@ -84,15 +72,6 @@ impl Arbitrary for Type {
                 return_type: Arbitrary::arbitrary(g),
             },
             _ => unreachable!(),
-        }
-    }
-}
-
-impl Arbitrary for ParamBound {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        ParamBound {
-            param_name: gen_valid_ident(g),
-            bounds: Arbitrary::arbitrary(g),
         }
     }
 }
@@ -135,33 +114,62 @@ impl Arbitrary for BasicType {
     }
 }
 
-impl Arbitrary for NamePrefix {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        let size = {
-            let s = g.size();
-            g.gen_range(0, s)
-        };
-
-        let mut node = NamePrefix::CrateId {
-            name: gen_valid_ident(g),
-            dis: "abc".to_string(), // TODO
-        };
-
-        for _ in 0..size {
-            node = NamePrefix::Node {
-                prefix: Arc::new(node),
-                ident: Arbitrary::arbitrary(g),
-            };
-        }
-
-        node
-    }
+#[derive(Copy, Clone)]
+enum Charset {
+    Ascii,
+    Unicode,
 }
 
 impl Arbitrary for QName {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        let len = {
+            let s = g.size();
+
+            if s > 1 {
+                1 + g.gen_range(0, s)
+            } else {
+                1
+            }
+        };
+
+        let charset = *g.choose(&[Charset::Ascii, Charset::Unicode]).unwrap();
+
+        let non_crate_root = g.size() > 2;
+
+        let mut path = Arc::new(match (g.gen_range(0, 100), non_crate_root) {
+            (0, true) => {
+                let mut smaller_rng = get_smaller_rng(g);
+
+                NamePrefix::TraitImpl {
+                    self_type: Arbitrary::arbitrary(&mut smaller_rng),
+                    impled_trait: Arbitrary::arbitrary(&mut smaller_rng),
+                    dis: Arbitrary::arbitrary(&mut smaller_rng),
+                }
+            }
+            (1, true) => {
+                let mut smaller_rng = get_smaller_rng(g);
+
+                NamePrefix::InherentImpl {
+                    self_type: Arbitrary::arbitrary(&mut smaller_rng),
+                }
+            }
+            _ => NamePrefix::CrateId {
+                name: generate_ident(g, charset, 2).ident,
+                dis: generate_crate_disambiguator(g),
+            },
+        });
+
+        for i in 0..len {
+            let max = 2 * (i + 1);
+
+            path = Arc::new(NamePrefix::Node {
+                prefix: path,
+                ident: generate_ident(g, charset, max),
+            });
+        }
+
         QName::Name {
-            name: Arbitrary::arbitrary(g),
+            name: path,
             args: Arbitrary::arbitrary(g),
         }
     }
@@ -174,8 +182,8 @@ impl Arbitrary for Symbol {
             instantiating_crate: {
                 if g.next_u32() % 3 == 0 {
                     Some(Arc::new(NamePrefix::CrateId {
-                        name: gen_valid_ident(g),
-                        dis: "abc".to_string(), // TODO
+                        name: generate_ident(g, Charset::Ascii, 3).ident,
+                        dis: generate_crate_disambiguator(g),
                     }))
                 } else {
                     None
@@ -185,48 +193,54 @@ impl Arbitrary for Symbol {
     }
 }
 
-// const ASCII_ONLY: bool = false;
-// const ASCII: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
-// const START_SET_START: usize = 10;
-
-// fn gen_valid_ident<G: Gen>(g: &mut G) -> String {
-
-//     let len = (1 + g.next_u32() % 20) as usize;
-//     let mut s = String::with_capacity(len);
-
-//     let ascii_only = ASCII_ONLY || (g.next_u32() % 5 != 0);
-//     if ascii_only {
-//         s.push(*g.choose(&ASCII[START_SET_START ..]).unwrap() as char);
-//         assert!(!s.as_bytes()[0].is_ascii_digit());
-
-//         for _ in 0 .. len {
-//             s.push(*g.choose(ASCII).unwrap() as char);
-//         }
-//     } else {
-//         let start = loop {
-//             let c: char = Arbitrary::arbitrary(g);
-//             if UnicodeXID::is_xid_start(c) {
-//                 break c
-//             }
-//         };
-
-//         s.push(start);
-
-//         while s.len() < len {
-//             let c: char = Arbitrary::arbitrary(g);
-//             if UnicodeXID::is_xid_continue(c) {
-//                 s.push(c);
-//             }
-//         }
-//     }
-
-//     s
-// }
-
-const VALID_IDENTS: &[&str] = &[
-    "foo", "_foo", "f00", "_0", "__1", "foo_", "E", "N", "X", "S",
+const IDENTS_ASCII: &[&str] = &[
+    "foo", "_foo", "f00", "_0", "foo_", "E", "N", "S", "foo", "_foo", "f00", "_0", "foo_", "E",
+    "N", "S",
 ];
 
-fn gen_valid_ident<G: Gen>(g: &mut G) -> String {
-    g.choose(VALID_IDENTS).unwrap().to_string()
+const IDENTS_UNICODE: &[&str] = &[
+    "foo",
+    "ρυστ",
+    "_foo",
+    "铁锈",
+    "f00",
+    "Schrödinger",
+    "_0",
+    "𝔸𝔸𝔸",
+    "foo_",
+    "😊",
+    "E",
+    "⚘",
+    "N",
+    "∀",
+    "S",
+    "🤦",
+];
+
+fn generate_ident<G: Gen>(g: &mut G, kind: Charset, max: usize) -> Ident {
+    let idents = match kind {
+        Charset::Ascii => IDENTS_ASCII,
+        Charset::Unicode => IDENTS_UNICODE,
+    };
+
+    let index = (g.next_u32() as usize) % cmp::min(idents.len(), max);
+
+    let ident = idents[index].to_string();
+
+    Ident {
+        ident,
+        tag: Arbitrary::arbitrary(g),
+        dis: Arbitrary::arbitrary(g),
+    }
+}
+
+fn generate_crate_disambiguator<G: Gen>(_: &mut G) -> String {
+    // We actually don't want variation here, otherwise things won't be
+    // compressible at all.
+    "abc".to_string()
+}
+
+fn get_smaller_rng<G: Gen>(g: &G) -> StdThreadGen {
+    let size = cmp::min(6, g.size()) / 2;
+    StdThreadGen::new(size)
 }

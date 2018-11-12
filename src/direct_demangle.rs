@@ -527,8 +527,7 @@ mod tests {
                     Subst(i as u64),
                     String::from_utf8(input[start..end].to_owned()).unwrap(),
                 )
-            })
-            .collect()
+            }).collect()
     }
 
     quickcheck! {
@@ -547,7 +546,6 @@ mod tests {
             let mut dd = ::direct_demangle::Demangler::new(compressed_mangled.as_bytes());
             dd.demangle_symbol().unwrap();
             let actual = String::from_utf8(dd.out.clone()).unwrap();
-            // ::direct_demangle::Demangler::demangle(compressed_mangled.as_bytes()).unwrap();
 
             if actual != expected {
                 ::debug::compare_dictionaries(&compress_dict.to_debug_dictionary_pretty(),
