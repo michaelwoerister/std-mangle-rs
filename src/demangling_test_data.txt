@@ -1,3 +1,12 @@
+# Test cases for symbol demangling
+#
+# File format: Every pair of lines where the first one starts with '#' and the
+# second one starts with "_R" is a test case. The first line gives the title of
+# the test, the second gives the mangled and (after the first whitespace)
+# demangled versions of a symbol.
+# Anything that doesn't conform to the syntax above is supposed to be ignored.
+
+
 
 ## Basic Types
 
@@ -85,6 +94,7 @@ _RNXiN16mycrate_abcd123f9SomeTraitE4quuxF3FOOSE <isize as mycrate[abcd123f]::Som
 _RNXiN16mycrate_abcd123f9SomeTraitEs_4quuxF3FOOSE <isize as mycrate[abcd123f]::SomeTrait>'2::quux::FOO
 
 
+
 ## Non-generic functions
 
 # Free-standing function at crate level
@@ -115,10 +125,11 @@ _RN16mycrate_abcd123f3foos0_4quuxFE mycrate[abcd123f]::foo'3::quux
 _RN16mycrate_abcd123f3foo1_C3barFE mycrate[abcd123f]::foo::{closure}'1::bar
 
 # Free-standing function with trait impl in path
-...
+_RNXReN11mycrate_xyz3FooE3foo6helperE <&str as mycrate[xyz]::Foo>::foo::helper
 
 # Free-standing function with specialized trait impl in path
 _RNXmN8std_12345DebugE4quuxFE <u32 as std[1234]::Debug>::quux
+
 
 
 ## Generic functions
@@ -159,7 +170,6 @@ _RN16mycrate_abcd123f3bazFIG1TEEE mycrate[abcd123f]::baz<T>
 # Generic function with disambiguated, named type parameter
 _RN16mycrate_abcd123f3bazFIG1Ts9_EEE mycrate[abcd123f]::baz<T'12>
 
-
 # Generic function with unicode named type argument
 ...
 
@@ -173,10 +183,11 @@ _RN16mycrate_abcd123f3bazFIN16mycrate_abcd123f3Foos_EEE mycrate[abcd123f]::baz<m
 _RN8std_23453mem8align_ofFINXjN16mycrate_abcd123f9SomeTraitE3fooF3BarEEE std[2345]::mem::align_of<<usize as mycrate[abcd123f]::SomeTrait>::foo::Bar>
 
 # Generic function with named type argument defined in specialized trait impl
-...
+_RN8std_23453mem8align_ofFINXjN16mycrate_abcd123f9SomeTraitEs_3fooF3BarEEE std[2345]::mem::align_of<<usize as mycrate[abcd123f]::SomeTrait>'2::foo::Bar>
 
 # Generic function with instantiating crate suffix
 _RN16mycrate_abcd123f3barFImEE20some_other_crate_xxx mycrate[abcd123f]::bar<u32> @ some_other_crate[xxx]
+
 
 
 ## Inherent methods
@@ -214,13 +225,33 @@ _RNMPu4quuxFE *const ()::quux
 # Inherent method with disambiguated named self type
 _RNMN7std_xxx3Foos_E4quuxFE std[xxx]::Foo'2::quux
 
-### Trait methods
+
+
+## Trait methods
 
 # Non-generic trait method
-...
+_RNXcN7std_xxx5CloneE5cloneFE <char as std[xxx]::Clone>::clone
 
+# Trait method with generic self-type
+_RNXN7std_xxx3BarImEEN7std_xxx5CloneE5cloneFE <std[xxx]::Bar<u32> as std[xxx]::Clone>::clone
 
-### Items in specialized trait impls
+# Trait method with generic trait
+_RNXN7std_xxx3BarEN7std_xxx3FooIaEE5cloneFE <std[xxx]::Bar as std[xxx]::Foo<i8>>::clone
+
+# Generic trait method with generic trait and generic self-type
+_RNXN7std_xxx3BarEN7std_xxx3FooIaEE4quuxFIReEE <std[xxx]::Bar as std[xxx]::Foo<i8>>::quux<&str>
+
+# Trait method with basic self-type
+_RNXuN7std_xxx3FooE4quuxFE <() as std[xxx]::Foo>::quux
+
+# Trait method with tuple self-type
+_RNXTmyEN7std_xxx3FooE4quuxFE <(u32,u64) as std[xxx]::Foo>::quux
+
+# Trait method with reference self-type
+_RNXQTmyEN7std_xxx3FooE4quuxFE <&mut (u32,u64) as std[xxx]::Foo>::quux
+
+# Trait method with disambiguated named self type
+_RNXN14some_crate_yyy3Bars_EN7std_xxx3FooE4quuxFE <some_crate[yyy]::Bar'2 as std[xxx]::Foo>::quux
 
 
 
@@ -233,10 +264,11 @@ _RN7std_xxx3fooF1_Cs0_E std[xxx]::foo::{closure}'3
 _RN7std_xxx3fooF1_Cs0_1_CE std[xxx]::foo::{closure}'3::{closure}'1
 
 # Closure in inherent method
-...
+_RNMm3fooF1_Cs_E u32::foo::{closure}'2
 
 # Closure in trait method
 _RNXlN7foo_xxx3BarIxEE4quuxF1_Cs_IcEE <i32 as foo[xxx]::Bar<i64>>::quux::{closure}'2<char>
+
 
 
 ## Compression
