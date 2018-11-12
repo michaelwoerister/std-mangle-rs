@@ -190,7 +190,7 @@ impl Decompress {
 
     fn decompress_type(&mut self, compressed: &Arc<Type>) -> Arc<Type> {
         let decompressed = match **compressed {
-            Type::BasicType(_) | Type::GenericParam(_) => {
+            Type::BasicType(_) => {
                 // Exit here!
                 return compressed.clone();
             }
@@ -298,6 +298,9 @@ impl Decompress {
                         params: decompressed_params,
                     })
                 }
+            }
+            Type::GenericParam(_) => {
+                compressed.clone()
             }
             Type::Subst(ref subst) => {
                 return if let Some(t) = self.types.get(subst) {

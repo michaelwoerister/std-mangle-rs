@@ -264,3 +264,6 @@ _RN7std_xxx3fooITNS_3BarES1_ES2_EE std[xxx]::foo<(std[xxx]::Bar,std[xxx]::Bar),(
 
 # Substituted instantiating crate suffix
 _RN16mycrate_abcd123f3barFImEES_ mycrate[abcd123f]::bar<u32> @ mycrate[abcd123f]
+
+# Compressed generic parameter
+_RN16mycrate_abcd123f3barFIG1TES1_EE mycrate[abcd123f]::bar<T,T>

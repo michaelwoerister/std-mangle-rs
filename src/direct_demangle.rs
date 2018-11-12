@@ -401,7 +401,6 @@ impl<'input> Demangler<'input> {
                     return expected("E", self.cur(), "demangling", "<generic-param-name>");
                 }
                 self.pos += 1;
-                return Ok(());
             }
 
             b'N' => {

@@ -156,9 +156,9 @@ impl Compress {
         }
 
         let compressed = match **ty {
-            Type::GenericParam(_) | Type::BasicType(_) => {
+            Type::BasicType(_) => {
                 // NOTE: We return here as we never allocate a substitution for
-                //       basic types or generic parameter names.
+                //       basic types.
                 return ty.clone();
             }
             Type::Named(ref name) => {
@@ -204,6 +204,9 @@ impl Compress {
                         return_type: compressed_return_type,
                     })
                 }
+            }
+            Type::GenericParam(_) => {
+                ty.clone()
             }
             Type::Subst(_) => unreachable!(),
         };
