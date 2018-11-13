@@ -2,45 +2,17 @@ use ast::*;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+#[cfg(test)]
+use debug::DebugDictionary;
+
 pub struct Decompress {
     name_prefixes: HashMap<Subst, Arc<NamePrefix>>,
     qnames: HashMap<Subst, Arc<QName>>,
     types: HashMap<Subst, Arc<Type>>,
-
     subst_counter: u64,
 }
 
 impl Decompress {
-    pub fn new() -> Decompress {
-        Decompress {
-            qnames: HashMap::new(),
-            name_prefixes: HashMap::new(),
-            types: HashMap::new(),
-            subst_counter: 0,
-        }
-    }
-
-    pub fn decompress(symbol: &Symbol) -> Symbol {
-        Decompress::new().decompress_symbol(symbol)
-    }
-
-    #[cfg(test)]
-    pub fn to_debug_dictionary(&self) -> Vec<(Subst, String)> {
-        let mut items = vec![];
-
-        items.extend(
-            self.name_prefixes
-                .iter()
-                .map(|(&k, v)| (k, format!("{:?}", v))),
-        );
-        items.extend(self.qnames.iter().map(|(&k, v)| (k, format!("{:?}", v))));
-        items.extend(self.types.iter().map(|(&k, v)| (k, format!("{:?}", v))));
-
-        items.sort_by_key(|&(k, _)| k);
-
-        items
-    }
-
     fn alloc_subst<T, D>(&mut self, node: &Arc<T>, dict: D)
     where
         D: FnOnce(&mut Self) -> &mut HashMap<Subst, Arc<T>>,
@@ -283,10 +255,11 @@ impl Decompress {
                     _ => unreachable!(),
                 };
 
-                if return_types_same && decompressed_params
-                    .iter()
-                    .zip(params.iter())
-                    .all(|(a, b)| Arc::ptr_eq(a, b))
+                if return_types_same
+                    && decompressed_params
+                        .iter()
+                        .zip(params.iter())
+                        .all(|(a, b)| Arc::ptr_eq(a, b))
                 {
                     compressed.clone()
                 } else {
@@ -321,33 +294,40 @@ impl Decompress {
     }
 }
 
+pub fn decompress_ext(symbol: &Symbol) -> (Symbol, Decompress) {
+    let mut state = Decompress {
+        qnames: HashMap::new(),
+        name_prefixes: HashMap::new(),
+        types: HashMap::new(),
+        subst_counter: 0,
+    };
+    let decompressed = state.decompress_symbol(symbol);
+    (decompressed, state)
+}
+
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use debug;
+impl Decompress {
+    pub fn to_debug_dictionary(&self) -> DebugDictionary {
+        let mut items = vec![];
 
-    quickcheck! {
-        fn compress_decompress(symbol: Symbol) -> bool {
-            let (compressed, c_dict) = ::compress::compress_ext(&symbol);
+        items.extend(self.name_prefixes.iter().map(|(&subst, ast)| {
+            let mut pretty = String::new();
+            ast.pretty_print(&mut pretty);
+            (subst, pretty)
+        }));
 
-            let mut decompressor = Decompress::new();
-            let decompressed = decompressor.decompress_symbol(&compressed);
+        items.extend(self.qnames.iter().map(|(&subst, ast)| {
+            let mut pretty = String::new();
+            ast.pretty_print(&mut pretty);
+            (subst, pretty)
+        }));
 
-            if symbol != decompressed {
-                debug::compare_dictionaries(
-                    &decompressor.to_debug_dictionary(),
-                    &c_dict.to_debug_dictionary(),
-                );
+        items.extend(self.types.iter().map(|(&subst, ast)| {
+            let mut pretty = String::new();
+            ast.pretty_print(&mut pretty);
+            (subst, pretty)
+        }));
 
-                panic!("original:     {:?}\n\
-                        decompressed: {:?}\n\
-                        compressed:   {:?}\n",
-                symbol,
-                decompressed,
-                compressed)
-            }
-
-            true
-        }
+        DebugDictionary::new(items)
     }
 }

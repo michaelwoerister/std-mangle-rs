@@ -4,6 +4,9 @@ use parse::EOT;
 use std::io::Write;
 use std::str;
 
+#[cfg(test)]
+use debug::DebugDictionary;
+
 pub struct Demangler<'input> {
     pos: usize,
 
@@ -16,16 +19,49 @@ impl<'input> Demangler<'input> {
     pub fn demangle(input: &[u8]) -> Result<String, String> {
         let mut state = Demangler::new(input);
 
-        if let Err(msg) = state.demangle_symbol() {
-            return Err(format!(
-                "Error demangling at position {}: {} - {}",
-                state.pos,
-                msg,
-                str::from_utf8(input).unwrap()
-            ));
+        if let Err(ref msg) = state.demangle_symbol() {
+            return Err(state.decorate_error_message(msg));
         }
 
         String::from_utf8(state.out).map_err(|e| format!("{}", e))
+    }
+
+    #[cfg(test)]
+    pub fn demangle_debug(input: &[u8]) -> (Result<String, String>, DebugDictionary) {
+        let mut state = Demangler::new(input);
+
+        let result = state.demangle_symbol();
+
+        let debug_dict = state
+            .dict
+            .iter()
+            .enumerate()
+            .map(|(idx, &(start, end))| {
+                (
+                    ::ast::Subst(idx as u64),
+                    String::from_utf8(state.out[start..end].to_owned()).unwrap(),
+                )
+            })
+            .collect();
+
+        let debug_dict = DebugDictionary::new(debug_dict);
+
+        match result {
+            Ok(()) => (
+                String::from_utf8(state.out).map_err(|e| format!("{}", e)),
+                debug_dict,
+            ),
+            Err(ref msg) => (Err(state.decorate_error_message(msg)), debug_dict),
+        }
+    }
+
+    fn decorate_error_message(&self, msg: &str) -> String {
+        format!(
+            "Error demangling at position {}: {} - {}",
+            self.pos,
+            msg,
+            str::from_utf8(self.input).unwrap()
+        )
     }
 
     fn new(input: &[u8]) -> Demangler {
@@ -51,7 +87,7 @@ impl<'input> Demangler<'input> {
         }
 
         // The qualified name
-        self.demangle_fully_qualified_name()?;
+        self.demangle_qname()?;
 
         // The (optional) instantiating crate
         if self.cur() != EOT {
@@ -110,7 +146,7 @@ impl<'input> Demangler<'input> {
         Ok(value)
     }
 
-    fn demangle_fully_qualified_name(&mut self) -> Result<(), String> {
+    fn demangle_qname(&mut self) -> Result<(), String> {
         match self.cur() {
             b'N' => {
                 let subst_start = self.out.len();
@@ -225,7 +261,7 @@ impl<'input> Demangler<'input> {
                 self.out.push(b'<');
                 self.demangle_type()?;
                 self.out.extend_from_slice(b" as ");
-                self.demangle_fully_qualified_name()?;
+                self.demangle_qname()?;
                 self.out.push(b'>');
 
                 let index = self.parse_opt_numeric_disambiguator()?;
@@ -405,7 +441,7 @@ impl<'input> Demangler<'input> {
 
             b'N' => {
                 self.pos -= 1;
-                self.demangle_fully_qualified_name()?;
+                self.demangle_qname()?;
                 // Return because we don't want to add a subst
                 return Ok(());
             }
@@ -512,56 +548,5 @@ impl<'input> Demangler<'input> {
         self.out.push(b'"');
         self.pos += 1;
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use ast::*;
-
-    fn to_debug_dictionary(input: &[u8], dict: &[(usize, usize)]) -> Vec<(Subst, String)> {
-        dict.iter()
-            .enumerate()
-            .map(|(i, &(start, end))| {
-                (
-                    Subst(i as u64),
-                    String::from_utf8(input[start..end].to_owned()).unwrap(),
-                )
-            }).collect()
-    }
-
-    quickcheck! {
-        fn demangle_direct(symbol: Symbol) -> bool {
-            let mut expected = String::new();
-            symbol.pretty_print(&mut expected);
-
-            let mut uncompressed_mangled = String::new();
-            symbol.mangle(&mut uncompressed_mangled);
-
-            let (compressed_symbol, compress_dict) = ::compress::compress_ext(&symbol);
-
-            let mut compressed_mangled = String::new();
-            compressed_symbol.mangle(&mut compressed_mangled);
-
-            let mut dd = ::direct_demangle::Demangler::new(compressed_mangled.as_bytes());
-            dd.demangle_symbol().unwrap();
-            let actual = String::from_utf8(dd.out.clone()).unwrap();
-
-            if actual != expected {
-                ::debug::compare_dictionaries(&compress_dict.to_debug_dictionary_pretty(),
-                                              &to_debug_dictionary(&dd.out, &dd.dict));
-
-                panic!("expected:     {}\n\
-                        actual:       {}\n\
-                        compressed:   {}\n\
-                        uncompressed: {}\n",
-                        expected,
-                        actual,
-                        compressed_mangled,
-                        uncompressed_mangled)
-            } else {
-                true
-            }
-        }
     }
 }

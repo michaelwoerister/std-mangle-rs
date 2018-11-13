@@ -48,10 +48,6 @@ impl<'input> Parser<'input> {
         }
     }
 
-    fn cur_char(&self) -> char {
-        self.cur() as char
-    }
-
     fn parse_symbol_prefix(&mut self) -> Result<(), String> {
         assert_eq!(self.pos, 0);
 
@@ -121,9 +117,9 @@ impl<'input> Parser<'input> {
 
         if to_digit(self.cur()).is_none() {
             return Err(format!(
-                "expected base-{} digit, found {:?}",
+                "Expected base-{} digit; found '{}' instead;",
                 radix,
-                self.cur_char()
+                self.cur() as char
             ));
         }
 
@@ -420,68 +416,13 @@ impl<'input> Parser<'input> {
 
         let abi = match self.cur() {
             b'c' => Abi::C,
-            _ => {
-                return Err(format!("Unknown ABI spec {:?}", self.cur_char()));
+            c => {
+                return expected("c", c, "parsing", "<abi>");
             }
         };
 
         self.pos += 1;
 
         Ok(abi)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    quickcheck! {
-        fn parsing(symbol: Symbol) -> bool {
-            let mut mangled = String::new();
-            symbol.mangle(&mut mangled);
-            match Parser::parse(mangled.as_bytes()) {
-                Ok(parsed) => {
-                    if symbol != parsed {
-                        panic!("expected: {:?}\n\
-                                actual:   {:?}\n\
-                                mangled:  {}\n",
-                                symbol,
-                                parsed,
-                                mangled)
-                    } else {
-                        true
-                    }
-                }
-                Err(e) => {
-                    panic!("{}", e)
-                }
-            }
-        }
-    }
-
-    quickcheck! {
-        fn parsing_compressed(symbol: Symbol) -> bool {
-            let mut mangled = String::new();
-            let compressed = ::compress::compress(&symbol);
-            compressed.mangle(&mut mangled);
-            match Parser::parse(mangled.as_bytes()) {
-                Ok(parsed) => {
-                    if parsed != compressed {
-                        panic!("Re-parsed compressed symbol differs from original
-                                expected: {:?}\n\
-                                actual:   {:?}\n\
-                                mangled:  {}\n",
-                                compressed,
-                                parsed,
-                                mangled)
-                    } else {
-                        true
-                    }
-                }
-                Err(e) => {
-                    panic!("{}", e)
-                }
-            }
-        }
     }
 }

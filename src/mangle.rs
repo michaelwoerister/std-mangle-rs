@@ -190,13 +190,6 @@ impl Type {
     }
 }
 
-// TODO
-// #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-// pub struct ParamBound {
-//     pub param_name: String,
-//     pub bounds: Vec<Arc<Type>>,
-// }
-
 // TODO: assignment
 impl Abi {
     pub fn mangle(&self, out: &mut String) {

@@ -3,12 +3,10 @@ use same::Same;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-pub fn compress(symbol: &Symbol) -> Symbol {
-    let (compressed, _) = compress_ext(symbol);
-    compressed
-}
+#[cfg(test)]
+use debug::DebugDictionary;
 
-pub(crate) fn compress_ext(symbol: &Symbol) -> (Symbol, Compress) {
+pub fn compress_ext(symbol: &Symbol) -> (Symbol, Compress) {
     let mut compress = Compress::new();
 
     let compressed = Symbol {
@@ -19,7 +17,8 @@ pub(crate) fn compress_ext(symbol: &Symbol) -> (Symbol, Compress) {
             .map(|ic| compress.compress_name_prefix(ic)),
     };
 
-    if cfg!(debug_assertions) {
+    #[cfg(test)]
+    {
         compress.sanity_check();
     }
 
@@ -254,22 +253,22 @@ impl Compress {
             _ => self.types.get(ty).cloned(),
         }
     }
+}
 
-    #[cfg(test)]
-    pub fn to_debug_dictionary(&self) -> Vec<(Subst, String)> {
-        let mut items = vec![];
-
-        items.extend(self.prefixes.iter().map(|(k, &v)| (v, format!("{:?}", k))));
-        items.extend(self.qnames.iter().map(|(k, &v)| (v, format!("{:?}", k))));
-        items.extend(self.types.iter().map(|(k, &v)| (v, format!("{:?}", k))));
-
-        items.sort_by_key(|&(k, _)| k);
-
-        items
+fn dedup<T, I: Same, M>(outer: &Arc<T>, inner: &I, compressed_inner: I, make: M) -> Arc<T>
+where
+    M: FnOnce(I) -> T,
+{
+    if compressed_inner.same_as(inner) {
+        outer.clone()
+    } else {
+        Arc::new(make(compressed_inner))
     }
+}
 
-    #[cfg(test)]
-    pub fn to_debug_dictionary_pretty(&self) -> Vec<(Subst, String)> {
+#[cfg(test)]
+impl Compress {
+    pub fn to_debug_dictionary(&self) -> DebugDictionary {
         let mut items = vec![];
 
         items.extend(self.prefixes.iter().map(|(k, &v)| {
@@ -288,9 +287,7 @@ impl Compress {
             (v, pretty)
         }));
 
-        items.sort_by_key(|&(k, _)| k);
-
-        items
+        DebugDictionary::new(items)
     }
 
     fn sanity_check(&self) {
@@ -305,8 +302,7 @@ impl Compress {
         // Check that there are no duplicate substitution indices and no holes
         // in the sequence.
         {
-            let mut all_substs: Vec<_> = self
-                .prefixes
+            let mut all_substs: Vec<_> = self.prefixes
                 .values()
                 .chain(self.qnames.values())
                 .chain(self.types.values())
@@ -322,29 +318,6 @@ impl Compress {
             for i in 1..all_substs.len() {
                 assert!(all_substs[i - 1] == all_substs[i] - 1);
             }
-        }
-    }
-}
-
-fn dedup<T, I: Same, M>(outer: &Arc<T>, inner: &I, compressed_inner: I, make: M) -> Arc<T>
-where
-    M: FnOnce(I) -> T,
-{
-    if compressed_inner.same_as(inner) {
-        outer.clone()
-    } else {
-        Arc::new(make(compressed_inner))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    quickcheck! {
-        fn compress_does_not_crash(symbol: Symbol) -> bool {
-            compress(&symbol);
-            true
         }
     }
 }

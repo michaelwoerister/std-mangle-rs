@@ -35,24 +35,19 @@ fn emit_test_case_ast(spec_line: &str, title_line: &str, output: &mut impl Write
             .replace(" ", "_")
             .replace("/", "_")
             .replace(",", "_")
-            .replace("-", "_")
-            + "_ast";
+            .replace("-", "_") + "_ast";
 
         writeln!(output, "#[test] #[allow(non_snake_case)] fn {}() {{", title).unwrap();
         writeln!(output, "  let demangled_expected = r#\"{}\"#;", demangled).unwrap();
         writeln!(
             output,
-            "  let ast = ::parse::Parser::parse(br#\"{}\"#).unwrap();",
+            "  let ast = ::mangled_symbol_to_ast(r#\"{}\"#).unwrap();",
             mangled
         ).unwrap();
+        writeln!(output, "  let decompressed = ::decompress_ast(&ast);").unwrap();
         writeln!(
             output,
-            "  let decompressed = ::decompress::Decompress::decompress(&ast);"
-        ).unwrap();
-        writeln!(output, "  let mut demangled_actual = String::new();").unwrap();
-        writeln!(
-            output,
-            "  decompressed.pretty_print(&mut demangled_actual);"
+            "  let demangled_actual = ::ast_to_demangled_symbol(&decompressed);"
         ).unwrap();
         writeln!(
             output,
@@ -73,8 +68,7 @@ fn emit_test_case_direct(spec_line: &str, title_line: &str, output: &mut impl Wr
             .replace(" ", "_")
             .replace("/", "_")
             .replace(",", "_")
-            .replace("-", "_")
-            + "_direct";
+            .replace("-", "_") + "_direct";
 
         writeln!(output, "#[test] #[allow(non_snake_case)] fn {}() {{", title).unwrap();
         writeln!(output, "  let demangled_expected = r#\"{}\"#;", demangled).unwrap();
@@ -84,7 +78,7 @@ fn emit_test_case_direct(spec_line: &str, title_line: &str, output: &mut impl Wr
         ).unwrap();
         writeln!(
             output,
-            "  let demangled_actual = ::direct_demangle::Demangler::demangle(b\"{}\");",
+            "  let demangled_actual = ::demangle_symbol(\"{}\");",
             mangled
         ).unwrap();
         writeln!(
