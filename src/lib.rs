@@ -1,3 +1,6 @@
+
+extern crate unic_idna_punycode as punycode;
+
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
@@ -14,6 +17,7 @@ pub mod mangle;
 pub mod parse;
 pub mod pretty;
 
+mod charset;
 mod error;
 mod same;
 

@@ -3,6 +3,9 @@ name = "std-mangle-rs"
 version = "0.1.0"
 authors = ["Michael Woerister <michaelwoerister@posteo>"]
 
+[dependencies]
+unic-idna-punycode = "0.7.0"
+
 [dev-dependencies]
 quickcheck = "0.7.1"
 rand = "0.5"

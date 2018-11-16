@@ -1,6 +1,8 @@
 use ast::{NUMERIC_DISAMBIGUATOR_RADIX, SUBST_RADIX};
+use charset;
 use error::{self, expected};
 use parse::EOT;
+use std::borrow::Cow;
 use std::io::Write;
 use std::str;
 
@@ -213,32 +215,46 @@ impl<'input> Demangler<'input> {
 
         let ident_len = self.parse_number(10)? as usize;
         let ident_start = self.pos;
+        let ident_bytes = &self.input[ident_start..ident_start + ident_len];
 
         self.pos += ident_len;
 
-        let mut always_print_dis = false;
+        let is_punycode = if self.cur() == b'u' {
+            self.pos += 1;
+            true
+        } else {
+            false
+        };
 
-        match self.cur() {
+        let is_closure = match self.cur() {
             b'C' => {
-                self.out.extend_from_slice(b"{closure}");
                 self.pos += 1;
-                always_print_dis = true;
+                true
             }
             b'F' | b'S' => {
-                self.out
-                    .extend_from_slice(&self.input[ident_start..ident_start + ident_len]);
-                // Just skip
                 self.pos += 1;
+                false
             }
-            _ => {
+            _ => false,
+        };
+
+        if is_closure {
+            self.out.extend_from_slice(b"{closure}");
+        } else {
+            if is_punycode {
+                match charset::decode_punycode_ident(ident_bytes) {
+                    Ok(ident) => self.out.extend_from_slice(ident.as_bytes()),
+                    Err(e) => return Err(e),
+                }
+            } else {
                 self.out
-                    .extend_from_slice(&self.input[ident_start..ident_start + ident_len]);
+                    .extend_from_slice(ident_bytes);
             }
         }
 
         let index = self.parse_opt_numeric_disambiguator()?;
 
-        if index > 1 || always_print_dis {
+        if index > 1 || is_closure {
             write!(self.out, "'{}", index).unwrap();
         }
 
@@ -281,8 +297,21 @@ impl<'input> Demangler<'input> {
             }
 
             c if c.is_ascii_digit() => {
-                let len = self.parse_number(10)? as usize;
-                let name_and_dis = &self.input[self.pos..self.pos + len];
+                let crateid_len = self.parse_number(10)? as usize;
+                let crateid_start = self.pos;
+                let crateid_bytes = &self.input[crateid_start..crateid_start + crateid_len];
+
+                self.pos += crateid_len;
+
+                let name_and_dis = if self.cur() == b'u' {
+                    self.pos += 1;
+                    match charset::decode_punycode_ident(crateid_bytes) {
+                        Ok(ident) => Cow::Owned(ident.into_bytes()),
+                        Err(e) => return Err(e),
+                    }
+                } else {
+                    Cow::Borrowed(crateid_bytes)
+                };
 
                 if let Some(sep) = name_and_dis.iter().rposition(|&c| c == b'_') {
                     self.out.extend_from_slice(&name_and_dis[..sep]);
@@ -292,11 +321,9 @@ impl<'input> Demangler<'input> {
                 } else {
                     return Err(format!(
                         "Crate ID '{}' does not contain disambiguator",
-                        str::from_utf8(name_and_dis).unwrap()
+                        str::from_utf8(crateid_bytes).unwrap()
                     ));
                 };
-
-                self.pos += len;
 
                 true
             }

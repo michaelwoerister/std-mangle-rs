@@ -1,4 +1,5 @@
 use ast::*;
+use charset;
 use std::fmt::Write;
 
 impl IdentTag {
@@ -33,9 +34,7 @@ impl NumericDisambiguator {
 
 impl Ident {
     pub fn mangle(&self, out: &mut String) {
-        let len = self.ident.len();
-        write!(out, "{}{}", len, self.ident).unwrap();
-
+        charset::write_len_prefixed_ident(&[&self.ident], out).unwrap();
         self.tag.mangle(out);
         self.dis.mangle(out);
     }
@@ -55,8 +54,7 @@ impl NamePrefix {
     pub fn mangle(&self, out: &mut String) {
         match *self {
             NamePrefix::CrateId { ref name, ref dis } => {
-                let len = name.len() + dis.len() + 1;
-                write!(out, "{}{}_{}", len, name, dis).unwrap();
+                charset::write_len_prefixed_ident(&[name, "_", dis], out).unwrap();
             }
             NamePrefix::TraitImpl {
                 ref self_type,

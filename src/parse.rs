@@ -1,5 +1,6 @@
 use ast::*;
 use error::{self, expected};
+use charset;
 use std::str;
 use std::sync::Arc;
 
@@ -135,8 +136,24 @@ impl<'input> Parser<'input> {
 
     fn parse_len_prefixed_ident(&mut self) -> Result<Ident, String> {
         let len = self.parse_number(10)? as usize;
-        let ident = String::from_utf8(self.input[self.pos..self.pos + len].to_owned()).unwrap();
+        let ident_bytes = &self.input[self.pos..self.pos + len];
+
+        if ident_bytes.iter().any(|b| !b.is_ascii()) {
+            return Err(format!("Ident '{}' unexpectedly contains non-ascii characters.",
+                String::from_utf8_lossy(ident_bytes)));
+        }
+
         self.pos += len;
+
+        let ident = if self.cur() == b'u' {
+            self.pos += 1;
+            match charset::decode_punycode_ident(ident_bytes) {
+                Ok(ident) => ident,
+                Err(err) => return Err(err),
+            }
+        } else {
+            String::from_utf8(ident_bytes.to_owned()).unwrap()
+        };
 
         let tag = match self.cur() {
             b'F' => {
