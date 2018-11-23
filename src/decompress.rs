@@ -308,24 +308,20 @@ pub fn decompress_ext(symbol: &Symbol) -> (Symbol, Decompress) {
 #[cfg(test)]
 impl Decompress {
     pub fn to_debug_dictionary(&self) -> DebugDictionary {
+        use ast_demangle::AstDemangle;
+
         let mut items = vec![];
 
         items.extend(self.name_prefixes.iter().map(|(&subst, ast)| {
-            let mut pretty = String::new();
-            ast.pretty_print(&mut pretty);
-            (subst, pretty)
+            (subst, ast.demangle())
         }));
 
         items.extend(self.qnames.iter().map(|(&subst, ast)| {
-            let mut pretty = String::new();
-            ast.pretty_print(&mut pretty);
-            (subst, pretty)
+            (subst, ast.demangle())
         }));
 
         items.extend(self.types.iter().map(|(&subst, ast)| {
-            let mut pretty = String::new();
-            ast.pretty_print(&mut pretty);
-            (subst, pretty)
+            (subst, ast.demangle())
         }));
 
         DebugDictionary::new(items)

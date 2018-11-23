@@ -9,13 +9,14 @@ extern crate rand;
 
 pub mod ast;
 
+pub mod compress_ref;
 pub mod compress;
 pub mod decompress;
 
 pub mod direct_demangle;
 pub mod mangle;
 pub mod parse;
-pub mod pretty;
+pub mod ast_demangle;
 
 mod charset;
 mod error;
@@ -51,9 +52,7 @@ pub fn mangled_symbol_to_ast(mangled_symbol: &str) -> Result<ast::Symbol, String
 
 /// Generates the demangled version of a symbol name's AST.
 pub fn ast_to_demangled_symbol(symbol_ast: &ast::Symbol) -> String {
-    let mut output = String::new();
-    symbol_ast.pretty_print(&mut output);
-    output
+    ast_demangle::AstDemangle::demangle(symbol_ast)
 }
 
 /// Compresses a symbol name's AST by replacing already encounters sub-trees

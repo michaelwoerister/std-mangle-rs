@@ -269,22 +269,18 @@ where
 #[cfg(test)]
 impl Compress {
     pub fn to_debug_dictionary(&self) -> DebugDictionary {
+        use ast_demangle::AstDemangle;
+
         let mut items = vec![];
 
         items.extend(self.prefixes.iter().map(|(k, &v)| {
-            let mut pretty = String::new();
-            k.pretty_print(&mut pretty);
-            (v, pretty)
+            (v, k.demangle())
         }));
         items.extend(self.qnames.iter().map(|(k, &v)| {
-            let mut pretty = String::new();
-            k.pretty_print(&mut pretty);
-            (v, pretty)
+            (v, k.demangle())
         }));
         items.extend(self.types.iter().map(|(k, &v)| {
-            let mut pretty = String::new();
-            k.pretty_print(&mut pretty);
-            (v, pretty)
+            (v, k.demangle())
         }));
 
         DebugDictionary::new(items)

@@ -1,16 +1,27 @@
 use ast::*;
 use std::fmt::Write;
 
-impl IdentTag {
-    pub fn pretty_print(&self, _out: &mut String) {
+
+pub trait AstDemangle {
+    fn demangle_to_string(&self, out: &mut String);
+
+    fn demangle(&self) -> String {
+        let mut out = String::new();
+        self.demangle_to_string(&mut out);
+        out
+    }
+}
+
+impl AstDemangle for IdentTag {
+    fn demangle_to_string(&self, _out: &mut String) {
         match *self {
             IdentTag::TypeNs | IdentTag::Static | IdentTag::Function | IdentTag::Closure => {}
         };
     }
 }
 
-impl Ident {
-    pub fn pretty_print(&self, out: &mut String) {
+impl AstDemangle for Ident {
+    fn demangle_to_string(&self, out: &mut String) {
         match self.tag {
             IdentTag::TypeNs | IdentTag::Static | IdentTag::Function => {
                 out.push_str(&self.ident);
@@ -27,14 +38,14 @@ impl Ident {
 }
 
 // This should not be needed generally
-impl Subst {
-    pub fn pretty_print(&self, out: &mut String) {
+impl AstDemangle for Subst {
+    fn demangle_to_string(&self, out: &mut String) {
         write!(out, "{{{}}}", self.0).unwrap();
     }
 }
 
-impl NamePrefix {
-    pub fn pretty_print(&self, out: &mut String) {
+impl AstDemangle for NamePrefix {
+    fn demangle_to_string(&self, out: &mut String) {
         match *self {
             NamePrefix::CrateId { ref name, ref dis } => {
                 write!(out, "{}[{}]", name, dis).unwrap();
@@ -45,9 +56,9 @@ impl NamePrefix {
                 dis,
             } => {
                 out.push('<');
-                self_type.pretty_print(out);
+                self_type.demangle_to_string(out);
                 out.push_str(" as ");
-                impled_trait.pretty_print(out);
+                impled_trait.demangle_to_string(out);
                 out.push('>');
 
                 if dis.0 != 0 {
@@ -55,43 +66,43 @@ impl NamePrefix {
                 }
             }
             NamePrefix::InherentImpl { ref self_type } => {
-                self_type.pretty_print(out);
+                self_type.demangle_to_string(out);
             }
             NamePrefix::Node {
                 ref prefix,
                 ref ident,
             } => {
-                prefix.pretty_print(out);
+                prefix.demangle_to_string(out);
                 out.push_str("::");
-                ident.pretty_print(out);
+                ident.demangle_to_string(out);
             }
             NamePrefix::Subst(subst) => {
-                subst.pretty_print(out);
+                subst.demangle_to_string(out);
             }
         }
     }
 }
 
-impl QName {
-    pub fn pretty_print(&self, out: &mut String) {
+impl AstDemangle for QName {
+    fn demangle_to_string(&self, out: &mut String) {
         match *self {
             QName::Name { ref name, ref args } => {
-                name.pretty_print(out);
-                args.pretty_print(out);
+                name.demangle_to_string(out);
+                args.demangle_to_string(out);
             }
             QName::Subst(subst) => {
-                subst.pretty_print(out);
+                subst.demangle_to_string(out);
             }
         }
     }
 }
 
-impl GenericArgumentList {
-    pub fn pretty_print(&self, out: &mut String) {
+impl AstDemangle for GenericArgumentList {
+    fn demangle_to_string(&self, out: &mut String) {
         if self.len() > 0 {
             out.push('<');
             for param in self.iter() {
-                param.pretty_print(out);
+                param.demangle_to_string(out);
                 out.push(',');
             }
             out.pop();
@@ -100,31 +111,31 @@ impl GenericArgumentList {
     }
 }
 
-impl Type {
-    pub fn pretty_print(&self, out: &mut String) {
+impl AstDemangle for Type {
+    fn demangle_to_string(&self, out: &mut String) {
         match *self {
             Type::BasicType(t) => {
-                t.pretty_print(out);
+                t.demangle_to_string(out);
             }
             Type::Ref(ref t) => {
                 out.push('&');
-                t.pretty_print(out);
+                t.demangle_to_string(out);
             }
             Type::RefMut(ref t) => {
                 out.push_str("&mut ");
-                t.pretty_print(out);
+                t.demangle_to_string(out);
             }
             Type::RawPtrConst(ref t) => {
                 out.push_str("*const ");
-                t.pretty_print(out);
+                t.demangle_to_string(out);
             }
             Type::RawPtrMut(ref t) => {
                 out.push_str("*mut ");
-                t.pretty_print(out);
+                t.demangle_to_string(out);
             }
             Type::Array(opt_size, ref t) => {
                 out.push('[');
-                t.pretty_print(out);
+                t.demangle_to_string(out);
 
                 if let Some(size) = opt_size {
                     write!(out, "; {}", size).unwrap();
@@ -135,17 +146,17 @@ impl Type {
             Type::Tuple(ref components) => {
                 out.push('(');
                 for c in components {
-                    c.pretty_print(out);
+                    c.demangle_to_string(out);
                     out.push(',');
                 }
                 out.pop();
                 out.push(')');
             }
             Type::Named(ref qname) => {
-                qname.pretty_print(out);
+                qname.demangle_to_string(out);
             }
             Type::GenericParam(ref ident) => {
-                ident.pretty_print(out);
+                ident.demangle_to_string(out);
             }
             Type::Fn {
                 ref return_type,
@@ -159,7 +170,7 @@ impl Type {
 
                 if abi != Abi::Rust {
                     out.push_str("extern ");
-                    abi.pretty_print(out);
+                    abi.demangle_to_string(out);
                     out.push(' ');
                 }
 
@@ -167,7 +178,7 @@ impl Type {
 
                 if params.len() > 0 {
                     for param in params {
-                        param.pretty_print(out);
+                        param.demangle_to_string(out);
                         out.push(',');
                     }
 
@@ -178,18 +189,18 @@ impl Type {
 
                 if let &Some(ref return_type) = return_type {
                     out.push_str(" -> ");
-                    return_type.pretty_print(out);
+                    return_type.demangle_to_string(out);
                 }
             }
             Type::Subst(subst) => {
-                subst.pretty_print(out);
+                subst.demangle_to_string(out);
             }
         }
     }
 }
 
-impl Abi {
-    pub fn pretty_print(&self, out: &mut String) {
+impl AstDemangle for Abi {
+    fn demangle_to_string(&self, out: &mut String) {
         out.push('"');
         match *self {
             Abi::Rust => {}
@@ -199,8 +210,8 @@ impl Abi {
     }
 }
 
-impl BasicType {
-    pub fn pretty_print(&self, out: &mut String) {
+impl AstDemangle for BasicType {
+    fn demangle_to_string(&self, out: &mut String) {
         out.push_str(match *self {
             BasicType::Bool => "bool",
             BasicType::Char => "char",
@@ -226,13 +237,13 @@ impl BasicType {
     }
 }
 
-impl Symbol {
-    pub fn pretty_print(&self, out: &mut String) {
-        self.name.pretty_print(out);
+impl AstDemangle for Symbol {
+    fn demangle_to_string(&self, out: &mut String) {
+        self.name.demangle_to_string(out);
 
         if let Some(ref instantiating_crate) = self.instantiating_crate {
             out.push_str(" @ ");
-            instantiating_crate.pretty_print(out);
+            instantiating_crate.demangle_to_string(out);
         }
     }
 }

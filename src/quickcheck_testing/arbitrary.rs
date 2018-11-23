@@ -153,9 +153,11 @@ impl Arbitrary for QName {
                     self_type: Arbitrary::arbitrary(&mut smaller_rng),
                 }
             }
-            _ => NamePrefix::CrateId {
-                name: generate_ident(g, charset, 2).ident,
-                dis: generate_crate_disambiguator(g),
+            _ => {
+                NamePrefix::CrateId {
+                    name: generate_ident(g, charset, 2).ident,
+                    dis: generate_crate_disambiguator(g),
+                }
             },
         });
 
@@ -223,13 +225,19 @@ fn generate_ident<G: Gen>(g: &mut G, kind: Charset, max: usize) -> Ident {
         Charset::Unicode => IDENTS_UNICODE,
     };
 
-    let index = (g.next_u32() as usize) % cmp::min(idents.len(), max);
 
-    let ident = idents[index].to_string();
+    let tag = Arbitrary::arbitrary(g);
+
+    let ident = if tag == IdentTag::Closure {
+        String::new()
+    } else {
+        let index = (g.next_u32() as usize) % cmp::min(idents.len(), max);
+        idents[index].to_string()
+    };
 
     Ident {
         ident,
-        tag: Arbitrary::arbitrary(g),
+        tag,
         dis: Arbitrary::arbitrary(g),
     }
 }
