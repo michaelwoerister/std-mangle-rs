@@ -226,16 +226,16 @@ impl<'input> Demangler<'input> {
             false
         };
 
-        let is_closure = match self.cur() {
+        let (is_closure, is_value_ns) = match self.cur() {
             b'C' => {
                 self.pos += 1;
-                true
+                (true, false)
             }
             b'V' => {
                 self.pos += 1;
-                false
+                (false, true)
             }
-            _ => false,
+            _ => (false, false),
         };
 
         if is_closure {
@@ -249,6 +249,10 @@ impl<'input> Demangler<'input> {
             } else {
                 self.out
                     .extend_from_slice(ident_bytes);
+            }
+
+            if is_value_ns {
+                self.out.push(b'\'');
             }
         }
 

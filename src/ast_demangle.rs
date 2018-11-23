@@ -12,27 +12,26 @@ pub trait AstDemangle {
     }
 }
 
-impl AstDemangle for IdentTag {
-    fn demangle_to_string(&self, _out: &mut String) {
-        match *self {
-            IdentTag::TypeNs | IdentTag::ValueNs | IdentTag::Closure => {}
-        };
-    }
-}
-
 impl AstDemangle for Ident {
     fn demangle_to_string(&self, out: &mut String) {
-        match self.tag {
-            IdentTag::TypeNs | IdentTag::ValueNs => {
+        let emit_disambiguator = match self.tag {
+            IdentTag::TypeNs => {
                 out.push_str(&self.ident);
-
-                if self.dis.0 != 0 {
-                    write!(out, "'{}", self.dis.0 + 1).unwrap();
-                }
+                self.dis.0 != 0
+            }
+            IdentTag::ValueNs => {
+                out.push_str(&self.ident);
+                out.push_str("'");
+                self.dis.0 != 0
             }
             IdentTag::Closure => {
-                write!(out, "{{closure}}'{}", self.dis.0 + 1).unwrap();
+                out.push_str("{closure}");
+                true
             }
+        };
+
+        if emit_disambiguator {
+            write!(out, "'{}", self.dis.0 + 1).unwrap();
         }
     }
 }
