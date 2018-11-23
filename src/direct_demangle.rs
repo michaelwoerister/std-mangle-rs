@@ -259,7 +259,7 @@ impl<'input> Demangler<'input> {
         let index = self.parse_opt_numeric_disambiguator()?;
 
         if index > 1 || is_closure {
-            write!(self.out, "'{}", index).unwrap();
+            write!(self.out, "[{}]", index).unwrap();
         }
 
         Ok(())
@@ -287,7 +287,7 @@ impl<'input> Demangler<'input> {
                 let index = self.parse_opt_numeric_disambiguator()?;
 
                 if index > 1 {
-                    write!(self.out, "'{}", index).unwrap();
+                    write!(self.out, "[{}]", index).unwrap();
                 }
 
                 true

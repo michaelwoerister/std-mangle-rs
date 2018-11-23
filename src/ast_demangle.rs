@@ -31,7 +31,7 @@ impl AstDemangle for Ident {
         };
 
         if emit_disambiguator {
-            write!(out, "'{}", self.dis.0 + 1).unwrap();
+            write!(out, "[{}]", self.dis.0 + 1).unwrap();
         }
     }
 }
@@ -61,7 +61,7 @@ impl AstDemangle for NamePrefix {
                 out.push('>');
 
                 if dis.0 != 0 {
-                    write!(out, "'{}", dis.0 + 1).unwrap();
+                    write!(out, "[{}]", dis.0 + 1).unwrap();
                 }
             }
             NamePrefix::InherentImpl { ref self_type } => {
