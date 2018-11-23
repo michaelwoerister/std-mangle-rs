@@ -59,12 +59,39 @@ quickcheck! {
 }
 
 quickcheck! {
-    fn demangle_direct(symbol: Symbol) -> bool {
-        let expected = ::ast_to_demangled_symbol(&symbol);
+    fn demangle_direct_verbose(symbol: Symbol) -> bool {
+        let expected = ::ast_to_demangled_symbol(&symbol, true);
         let uncompressed_mangled = ::ast_to_mangled_symbol(&symbol);
         let (compressed_symbol, compression_state) = ::compress::compress_ext(&symbol);
         let compressed_mangled =::ast_to_mangled_symbol(&compressed_symbol);
-        let (actual, demangling_dict) =  ::direct_demangle::Demangler::demangle_debug(compressed_mangled.as_bytes());
+        let (actual, demangling_dict) =  ::direct_demangle::Demangler::demangle_debug(compressed_mangled.as_bytes(), true);
+
+        let actual = actual.unwrap();
+
+        if actual != expected {
+            demangling_dict.print_comparison(&compression_state.to_debug_dictionary());
+
+            panic!("expected:     {}\n\
+                    actual:       {}\n\
+                    compressed:   {}\n\
+                    uncompressed: {}\n",
+                    expected,
+                    actual,
+                    compressed_mangled,
+                    uncompressed_mangled)
+        } else {
+            true
+        }
+    }
+}
+
+quickcheck! {
+    fn demangle_direct(symbol: Symbol) -> bool {
+        let expected = ::ast_to_demangled_symbol(&symbol, false);
+        let uncompressed_mangled = ::ast_to_mangled_symbol(&symbol);
+        let (compressed_symbol, compression_state) = ::compress::compress_ext(&symbol);
+        let compressed_mangled =::ast_to_mangled_symbol(&compressed_symbol);
+        let (actual, demangling_dict) =  ::direct_demangle::Demangler::demangle_debug(compressed_mangled.as_bytes(), false);
 
         let actual = actual.unwrap();
 

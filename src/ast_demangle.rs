@@ -3,26 +3,29 @@ use std::fmt::Write;
 
 
 pub trait AstDemangle {
-    fn demangle_to_string(&self, out: &mut String);
+    fn demangle_to_string(&self, out: &mut String, verbose: bool);
 
-    fn demangle(&self) -> String {
+    fn demangle(&self, verbose: bool) -> String {
         let mut out = String::new();
-        self.demangle_to_string(&mut out);
+        self.demangle_to_string(&mut out, verbose);
         out
     }
 }
 
 impl AstDemangle for Ident {
-    fn demangle_to_string(&self, out: &mut String) {
+    fn demangle_to_string(&self, out: &mut String, verbose: bool) {
         let emit_disambiguator = match self.tag {
             IdentTag::TypeNs => {
                 out.push_str(&self.ident);
-                self.dis.0 != 0
+                self.dis.0 != 0 && verbose
             }
             IdentTag::ValueNs => {
                 out.push_str(&self.ident);
-                out.push_str("'");
-                self.dis.0 != 0
+
+                if verbose {
+                    out.push_str("'");
+                }
+                self.dis.0 != 0 && verbose
             }
             IdentTag::Closure => {
                 out.push_str("{closure}");
@@ -38,16 +41,19 @@ impl AstDemangle for Ident {
 
 // This should not be needed generally
 impl AstDemangle for Subst {
-    fn demangle_to_string(&self, out: &mut String) {
+    fn demangle_to_string(&self, out: &mut String, _verbose: bool) {
         write!(out, "{{{}}}", self.0).unwrap();
     }
 }
 
 impl AstDemangle for NamePrefix {
-    fn demangle_to_string(&self, out: &mut String) {
+    fn demangle_to_string(&self, out: &mut String, verbose: bool) {
         match *self {
             NamePrefix::CrateId { ref name, ref dis } => {
-                write!(out, "{}[{}]", name, dis).unwrap();
+                out.push_str(name);
+                if verbose {
+                    write!(out, "[{}]", dis).unwrap();
+                }
             }
             NamePrefix::TraitImpl {
                 ref self_type,
@@ -55,53 +61,53 @@ impl AstDemangle for NamePrefix {
                 dis,
             } => {
                 out.push('<');
-                self_type.demangle_to_string(out);
+                self_type.demangle_to_string(out, verbose);
                 out.push_str(" as ");
-                impled_trait.demangle_to_string(out);
+                impled_trait.demangle_to_string(out, verbose);
                 out.push('>');
 
-                if dis.0 != 0 {
+                if dis.0 != 0 && verbose {
                     write!(out, "[{}]", dis.0 + 1).unwrap();
                 }
             }
             NamePrefix::InherentImpl { ref self_type } => {
-                self_type.demangle_to_string(out);
+                self_type.demangle_to_string(out, verbose);
             }
             NamePrefix::Node {
                 ref prefix,
                 ref ident,
             } => {
-                prefix.demangle_to_string(out);
+                prefix.demangle_to_string(out, verbose);
                 out.push_str("::");
-                ident.demangle_to_string(out);
+                ident.demangle_to_string(out, verbose);
             }
             NamePrefix::Subst(subst) => {
-                subst.demangle_to_string(out);
+                subst.demangle_to_string(out, verbose);
             }
         }
     }
 }
 
 impl AstDemangle for QName {
-    fn demangle_to_string(&self, out: &mut String) {
+    fn demangle_to_string(&self, out: &mut String, verbose: bool) {
         match *self {
             QName::Name { ref name, ref args } => {
-                name.demangle_to_string(out);
-                args.demangle_to_string(out);
+                name.demangle_to_string(out, verbose);
+                args.demangle_to_string(out, verbose);
             }
             QName::Subst(subst) => {
-                subst.demangle_to_string(out);
+                subst.demangle_to_string(out, verbose);
             }
         }
     }
 }
 
 impl AstDemangle for GenericArgumentList {
-    fn demangle_to_string(&self, out: &mut String) {
+    fn demangle_to_string(&self, out: &mut String, verbose: bool) {
         if self.len() > 0 {
             out.push('<');
             for param in self.iter() {
-                param.demangle_to_string(out);
+                param.demangle_to_string(out, verbose);
                 out.push(',');
             }
             out.pop();
@@ -111,30 +117,30 @@ impl AstDemangle for GenericArgumentList {
 }
 
 impl AstDemangle for Type {
-    fn demangle_to_string(&self, out: &mut String) {
+    fn demangle_to_string(&self, out: &mut String, verbose: bool) {
         match *self {
             Type::BasicType(t) => {
-                t.demangle_to_string(out);
+                t.demangle_to_string(out, verbose);
             }
             Type::Ref(ref t) => {
                 out.push('&');
-                t.demangle_to_string(out);
+                t.demangle_to_string(out, verbose);
             }
             Type::RefMut(ref t) => {
                 out.push_str("&mut ");
-                t.demangle_to_string(out);
+                t.demangle_to_string(out, verbose);
             }
             Type::RawPtrConst(ref t) => {
                 out.push_str("*const ");
-                t.demangle_to_string(out);
+                t.demangle_to_string(out, verbose);
             }
             Type::RawPtrMut(ref t) => {
                 out.push_str("*mut ");
-                t.demangle_to_string(out);
+                t.demangle_to_string(out, verbose);
             }
             Type::Array(opt_size, ref t) => {
                 out.push('[');
-                t.demangle_to_string(out);
+                t.demangle_to_string(out, verbose);
 
                 if let Some(size) = opt_size {
                     write!(out, "; {}", size).unwrap();
@@ -145,17 +151,17 @@ impl AstDemangle for Type {
             Type::Tuple(ref components) => {
                 out.push('(');
                 for c in components {
-                    c.demangle_to_string(out);
+                    c.demangle_to_string(out, verbose);
                     out.push(',');
                 }
                 out.pop();
                 out.push(')');
             }
             Type::Named(ref qname) => {
-                qname.demangle_to_string(out);
+                qname.demangle_to_string(out, verbose);
             }
             Type::GenericParam(ref ident) => {
-                ident.demangle_to_string(out);
+                ident.demangle_to_string(out, verbose);
             }
             Type::Fn {
                 ref return_type,
@@ -169,7 +175,7 @@ impl AstDemangle for Type {
 
                 if abi != Abi::Rust {
                     out.push_str("extern ");
-                    abi.demangle_to_string(out);
+                    abi.demangle_to_string(out, verbose);
                     out.push(' ');
                 }
 
@@ -177,7 +183,7 @@ impl AstDemangle for Type {
 
                 if params.len() > 0 {
                     for param in params {
-                        param.demangle_to_string(out);
+                        param.demangle_to_string(out, verbose);
                         out.push(',');
                     }
 
@@ -188,18 +194,18 @@ impl AstDemangle for Type {
 
                 if let &Some(ref return_type) = return_type {
                     out.push_str(" -> ");
-                    return_type.demangle_to_string(out);
+                    return_type.demangle_to_string(out, verbose);
                 }
             }
             Type::Subst(subst) => {
-                subst.demangle_to_string(out);
+                subst.demangle_to_string(out, verbose);
             }
         }
     }
 }
 
 impl AstDemangle for Abi {
-    fn demangle_to_string(&self, out: &mut String) {
+    fn demangle_to_string(&self, out: &mut String, _verbose: bool) {
         out.push('"');
         match *self {
             Abi::Rust => {}
@@ -210,7 +216,7 @@ impl AstDemangle for Abi {
 }
 
 impl AstDemangle for BasicType {
-    fn demangle_to_string(&self, out: &mut String) {
+    fn demangle_to_string(&self, out: &mut String, _verbose: bool) {
         out.push_str(match *self {
             BasicType::Bool => "bool",
             BasicType::Char => "char",
@@ -237,12 +243,14 @@ impl AstDemangle for BasicType {
 }
 
 impl AstDemangle for Symbol {
-    fn demangle_to_string(&self, out: &mut String) {
-        self.name.demangle_to_string(out);
+    fn demangle_to_string(&self, out: &mut String, verbose: bool) {
+        self.name.demangle_to_string(out, verbose);
 
-        if let Some(ref instantiating_crate) = self.instantiating_crate {
-            out.push_str(" @ ");
-            instantiating_crate.demangle_to_string(out);
+        if verbose {
+            if let Some(ref instantiating_crate) = self.instantiating_crate {
+                out.push_str(" @ ");
+                instantiating_crate.demangle_to_string(out, verbose);
+            }
         }
     }
 }

@@ -313,15 +313,15 @@ impl Decompress {
         let mut items = vec![];
 
         items.extend(self.name_prefixes.iter().map(|(&subst, ast)| {
-            (subst, ast.demangle())
+            (subst, ast.demangle(true))
         }));
 
         items.extend(self.qnames.iter().map(|(&subst, ast)| {
-            (subst, ast.demangle())
+            (subst, ast.demangle(true))
         }));
 
         items.extend(self.types.iter().map(|(&subst, ast)| {
-            (subst, ast.demangle())
+            (subst, ast.demangle(true))
         }));
 
         DebugDictionary::new(items)

@@ -47,7 +47,7 @@ fn emit_test_case_ast(spec_line: &str, title_line: &str, output: &mut impl Write
         writeln!(output, "  let decompressed = ::decompress_ast(&ast);").unwrap();
         writeln!(
             output,
-            "  let demangled_actual = ::ast_to_demangled_symbol(&decompressed);"
+            "  let demangled_actual = ::ast_to_demangled_symbol(&decompressed, true);"
         ).unwrap();
         writeln!(
             output,
@@ -78,7 +78,7 @@ fn emit_test_case_direct(spec_line: &str, title_line: &str, output: &mut impl Wr
         ).unwrap();
         writeln!(
             output,
-            "  let demangled_actual = ::demangle_symbol(\"{}\");",
+            "  let demangled_actual = ::demangle_symbol(\"{}\", true);",
             mangled
         ).unwrap();
         writeln!(

@@ -12,14 +12,16 @@ use debug::DebugDictionary;
 pub struct Demangler<'input> {
     pos: usize,
 
+    verbose: bool,
+
     input: &'input [u8],
     out: Vec<u8>,
     dict: Vec<(usize, usize)>,
 }
 
 impl<'input> Demangler<'input> {
-    pub fn demangle(input: &[u8]) -> Result<String, String> {
-        let mut state = Demangler::new(input);
+    pub fn demangle(input: &[u8], verbose: bool) -> Result<String, String> {
+        let mut state = Demangler::new(input, verbose);
 
         if let Err(ref msg) = state.demangle_symbol() {
             return Err(state.decorate_error_message(msg));
@@ -29,8 +31,8 @@ impl<'input> Demangler<'input> {
     }
 
     #[cfg(test)]
-    pub fn demangle_debug(input: &[u8]) -> (Result<String, String>, DebugDictionary) {
-        let mut state = Demangler::new(input);
+    pub fn demangle_debug(input: &[u8], verbose: bool) -> (Result<String, String>, DebugDictionary) {
+        let mut state = Demangler::new(input, verbose);
 
         let result = state.demangle_symbol();
 
@@ -66,9 +68,10 @@ impl<'input> Demangler<'input> {
         )
     }
 
-    fn new(input: &[u8]) -> Demangler {
+    fn new(input: &[u8], verbose: bool) -> Demangler {
         Demangler {
             pos: 0,
+            verbose,
             input,
             out: Vec::new(),
             dict: Vec::new(),
@@ -92,7 +95,7 @@ impl<'input> Demangler<'input> {
         self.demangle_qname()?;
 
         // The (optional) instantiating crate
-        if self.cur() != EOT {
+        if self.cur() != EOT && self.verbose {
             self.out.extend_from_slice(b" @ ");
             self.demangle_name_prefix()
         } else {
@@ -251,14 +254,14 @@ impl<'input> Demangler<'input> {
                     .extend_from_slice(ident_bytes);
             }
 
-            if is_value_ns {
+            if self.verbose && is_value_ns {
                 self.out.push(b'\'');
             }
         }
 
         let index = self.parse_opt_numeric_disambiguator()?;
 
-        if index > 1 || is_closure {
+        if (index > 1 && self.verbose) || is_closure {
             write!(self.out, "[{}]", index).unwrap();
         }
 
@@ -286,7 +289,7 @@ impl<'input> Demangler<'input> {
 
                 let index = self.parse_opt_numeric_disambiguator()?;
 
-                if index > 1 {
+                if index > 1 && self.verbose {
                     write!(self.out, "[{}]", index).unwrap();
                 }
 
@@ -319,9 +322,12 @@ impl<'input> Demangler<'input> {
 
                 if let Some(sep) = name_and_dis.iter().rposition(|&c| c == b'_') {
                     self.out.extend_from_slice(&name_and_dis[..sep]);
-                    self.out.push(b'[');
-                    self.out.extend_from_slice(&name_and_dis[sep + 1..]);
-                    self.out.push(b']');
+
+                    if self.verbose {
+                        self.out.push(b'[');
+                        self.out.extend_from_slice(&name_and_dis[sep + 1..]);
+                        self.out.push(b']');
+                    }
                 } else {
                     return Err(format!(
                         "Crate ID '{}' does not contain disambiguator",
