@@ -134,3 +134,26 @@ quickcheck! {
         true
     }
 }
+
+quickcheck! {
+    fn compress_ref_decompress_leaves_ast_unchanged(symbol: Symbol) -> bool {
+        let (compressed, compression_state) = ::compress_ref::compress_ext(&symbol);
+        let (decompressed, decompression_state) = ::decompress::decompress_ext(&compressed);
+
+        if symbol != decompressed {
+            let compression_dict = compression_state.to_debug_dictionary();
+            let decompression_dict = decompression_state.to_debug_dictionary();
+
+            decompression_dict.print_comparison(&compression_dict);
+
+            panic!("original:     {:?}\n\
+                    decompressed: {:?}\n\
+                    compressed:   {:?}\n",
+            symbol,
+            decompressed,
+            compressed)
+        }
+
+        true
+    }
+}
