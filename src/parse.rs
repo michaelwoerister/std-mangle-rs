@@ -1,6 +1,6 @@
 use ast::*;
-use error::{self, expected};
 use charset;
+use error::{self, expected};
 use std::str;
 use std::sync::Arc;
 
@@ -139,8 +139,10 @@ impl<'input> Parser<'input> {
         let ident_bytes = &self.input[self.pos..self.pos + len];
 
         if ident_bytes.iter().any(|b| !b.is_ascii()) {
-            return Err(format!("Ident '{}' unexpectedly contains non-ascii characters.",
-                String::from_utf8_lossy(ident_bytes)));
+            return Err(format!(
+                "Ident '{}' unexpectedly contains non-ascii characters.",
+                String::from_utf8_lossy(ident_bytes)
+            ));
         }
 
         self.pos += len;

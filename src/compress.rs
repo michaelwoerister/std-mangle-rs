@@ -273,15 +273,9 @@ impl Compress {
 
         let mut items = vec![];
 
-        items.extend(self.prefixes.iter().map(|(k, &v)| {
-            (v, k.demangle(true))
-        }));
-        items.extend(self.qnames.iter().map(|(k, &v)| {
-            (v, k.demangle(true))
-        }));
-        items.extend(self.types.iter().map(|(k, &v)| {
-            (v, k.demangle(true))
-        }));
+        items.extend(self.prefixes.iter().map(|(k, &v)| (v, k.demangle(true))));
+        items.extend(self.qnames.iter().map(|(k, &v)| (v, k.demangle(true))));
+        items.extend(self.types.iter().map(|(k, &v)| (v, k.demangle(true))));
 
         DebugDictionary::new(items)
     }

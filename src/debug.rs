@@ -1,4 +1,3 @@
-
 //! This module contains some facilities for comparing compression dictionaries.
 
 use ast::*;

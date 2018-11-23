@@ -1,7 +1,6 @@
 use ast::*;
 use std::fmt::Write;
 
-
 pub trait AstDemangle {
     fn demangle_to_string(&self, out: &mut String, verbose: bool);
 

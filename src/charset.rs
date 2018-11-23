@@ -14,14 +14,17 @@ pub fn write_len_prefixed_ident(ident: &[&str], out: &mut String) -> Result<(), 
         let mut encoded_ident = if let Some(encoded_ident) = punycode::encode_str(&ident) {
             encoded_ident.into_bytes()
         } else {
-            return Err(format!("The identifier '{}' cannot be encoded to punycode.", ident));
+            return Err(format!(
+                "The identifier '{}' cannot be encoded to punycode.",
+                ident
+            ));
         };
 
         assert!(encoded_ident.iter().all(u8::is_ascii));
 
         if let Some(index) = encoded_ident.iter().rposition(|&c| c == b'-') {
             encoded_ident[index] = b'_';
-            remap_punycode_charset_09_to_AJ(&mut encoded_ident[index ..]);
+            remap_punycode_charset_09_to_AJ(&mut encoded_ident[index..]);
         } else {
             // The ident consisted entirely of non-ascii characters.
             remap_punycode_charset_09_to_AJ(&mut encoded_ident[..]);
@@ -45,8 +48,10 @@ pub fn write_len_prefixed_ident(ident: &[&str], out: &mut String) -> Result<(), 
 
 pub fn decode_punycode_ident(ident_bytes: &[u8]) -> Result<String, String> {
     if ident_bytes.iter().any(|b| !b.is_ascii()) {
-        return Err(format!("Ident '{}' unexpectedly contains non-ascii characters.",
-            String::from_utf8_lossy(ident_bytes)));
+        return Err(format!(
+            "Ident '{}' unexpectedly contains non-ascii characters.",
+            String::from_utf8_lossy(ident_bytes)
+        ));
     }
 
     let mut ident_bytes = ident_bytes.to_owned();
@@ -63,7 +68,10 @@ pub fn decode_punycode_ident(ident_bytes: &[u8]) -> Result<String, String> {
     match punycode::decode_to_string(&ident_str) {
         Some(s) => Ok(s),
         None => {
-            return Err(format!("Could not decode punycode-encoded ident '{}'.", ident_str));
+            return Err(format!(
+                "Could not decode punycode-encoded ident '{}'.",
+                ident_str
+            ));
         }
     }
 }

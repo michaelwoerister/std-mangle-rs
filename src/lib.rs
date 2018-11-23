@@ -1,4 +1,3 @@
-
 extern crate unic_idna_punycode as punycode;
 
 #[cfg(test)]
@@ -9,14 +8,14 @@ extern crate rand;
 
 pub mod ast;
 
-pub mod compress_ref;
 pub mod compress;
+pub mod compress_ref;
 pub mod decompress;
 
+pub mod ast_demangle;
 pub mod direct_demangle;
 pub mod mangle;
 pub mod parse;
-pub mod ast_demangle;
 
 mod charset;
 mod error;

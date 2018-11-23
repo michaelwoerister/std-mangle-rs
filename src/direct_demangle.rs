@@ -31,7 +31,10 @@ impl<'input> Demangler<'input> {
     }
 
     #[cfg(test)]
-    pub fn demangle_debug(input: &[u8], verbose: bool) -> (Result<String, String>, DebugDictionary) {
+    pub fn demangle_debug(
+        input: &[u8],
+        verbose: bool,
+    ) -> (Result<String, String>, DebugDictionary) {
         let mut state = Demangler::new(input, verbose);
 
         let result = state.demangle_symbol();
@@ -250,8 +253,7 @@ impl<'input> Demangler<'input> {
                     Err(e) => return Err(e),
                 }
             } else {
-                self.out
-                    .extend_from_slice(ident_bytes);
+                self.out.extend_from_slice(ident_bytes);
             }
 
             if self.verbose && is_value_ns {

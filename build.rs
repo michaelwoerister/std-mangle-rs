@@ -14,22 +14,26 @@ fn main() {
 
     let lines: Vec<_> = test_case_definitions.lines().map(|l| l.unwrap()).collect();
 
-    for i in 1 .. lines.len() - 1 {
-        if lines[i].starts_with("_R") && lines[i-1].starts_with("#") {
-            let title_line = &lines[i-1];
+    for i in 1..lines.len() - 1 {
+        if lines[i].starts_with("_R") && lines[i - 1].starts_with("#") {
+            let title_line = &lines[i - 1];
             let spec_line = &lines[i];
 
             emit_test_case_ast(spec_line, title_line, &mut output, true);
             emit_test_case_direct(spec_line, title_line, &mut output, true);
 
             // build non-verbose pseudoline
-            assert!(!lines[i+1].trim().is_empty() && !lines[i+1].starts_with("#"),
-                    "non-verbose test case missing for test at line {}",
-                    i-1);
+            assert!(
+                !lines[i + 1].trim().is_empty() && !lines[i + 1].starts_with("#"),
+                "non-verbose test case missing for test at line {}",
+                i - 1
+            );
 
-            let non_verbose_spec_line = &format!("{} {}",
+            let non_verbose_spec_line = &format!(
+                "{} {}",
                 extract_mangled_name_from_spec_line(spec_line),
-                lines[i+1].trim());
+                lines[i + 1].trim()
+            );
 
             emit_test_case_ast(non_verbose_spec_line, title_line, &mut output, false);
             emit_test_case_direct(non_verbose_spec_line, title_line, &mut output, false);
@@ -81,7 +85,12 @@ fn emit_test_case_ast(spec_line: &str, title_line: &str, output: &mut impl Write
     }
 }
 
-fn emit_test_case_direct(spec_line: &str, title_line: &str, output: &mut impl Write, verbose: bool) {
+fn emit_test_case_direct(
+    spec_line: &str,
+    title_line: &str,
+    output: &mut impl Write,
+    verbose: bool,
+) {
     if spec_line.starts_with("_R") && title_line.starts_with("#") {
         let end_of_mangled_name = spec_line.find(' ').unwrap();
         let mangled = &spec_line[..end_of_mangled_name];
@@ -107,8 +116,7 @@ fn emit_test_case_direct(spec_line: &str, title_line: &str, output: &mut impl Wr
         writeln!(
             output,
             "  let demangled_actual = ::demangle_symbol(\"{}\", {});",
-            mangled,
-            verbose
+            mangled, verbose
         ).unwrap();
         writeln!(
             output,
