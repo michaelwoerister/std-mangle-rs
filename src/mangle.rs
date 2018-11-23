@@ -6,8 +6,7 @@ impl IdentTag {
     pub fn mangle(&self, out: &mut String) {
         match *self {
             IdentTag::TypeNs => {}
-            IdentTag::Function => out.push('F'),
-            IdentTag::Static => out.push('S'),
+            IdentTag::ValueNs => out.push('V'),
             IdentTag::Closure => out.push('C'),
         }
     }

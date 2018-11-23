@@ -3,9 +3,8 @@ use std::sync::Arc;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum IdentTag {
-    Function,
-    Static,
     TypeNs,
+    ValueNs,
     Closure,
 }
 

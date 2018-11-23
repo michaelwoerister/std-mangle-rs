@@ -15,7 +15,7 @@ pub trait AstDemangle {
 impl AstDemangle for IdentTag {
     fn demangle_to_string(&self, _out: &mut String) {
         match *self {
-            IdentTag::TypeNs | IdentTag::Static | IdentTag::Function | IdentTag::Closure => {}
+            IdentTag::TypeNs | IdentTag::ValueNs | IdentTag::Closure => {}
         };
     }
 }
@@ -23,7 +23,7 @@ impl AstDemangle for IdentTag {
 impl AstDemangle for Ident {
     fn demangle_to_string(&self, out: &mut String) {
         match self.tag {
-            IdentTag::TypeNs | IdentTag::Static | IdentTag::Function => {
+            IdentTag::TypeNs | IdentTag::ValueNs => {
                 out.push_str(&self.ident);
 
                 if self.dis.0 != 0 {

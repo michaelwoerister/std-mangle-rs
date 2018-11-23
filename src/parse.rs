@@ -156,13 +156,9 @@ impl<'input> Parser<'input> {
         };
 
         let tag = match self.cur() {
-            b'F' => {
+            b'V' => {
                 self.pos += 1;
-                IdentTag::Function
-            }
-            b'S' => {
-                self.pos += 1;
-                IdentTag::Static
+                IdentTag::ValueNs
             }
             b'C' => {
                 self.pos += 1;

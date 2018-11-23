@@ -6,11 +6,10 @@ use std::sync::Arc;
 
 impl Arbitrary for IdentTag {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        match g.next_u32() % 4 {
-            0 => IdentTag::Function,
-            1 => IdentTag::Static,
-            2 => IdentTag::TypeNs,
-            3 => IdentTag::Closure,
+        match g.next_u32() % 3 {
+            0 => IdentTag::TypeNs,
+            1 => IdentTag::ValueNs,
+            2 => IdentTag::Closure,
             _ => unreachable!(),
         }
     }

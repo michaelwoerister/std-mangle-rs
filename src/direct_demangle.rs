@@ -231,7 +231,7 @@ impl<'input> Demangler<'input> {
                 self.pos += 1;
                 true
             }
-            b'F' | b'S' => {
+            b'V' => {
                 self.pos += 1;
                 false
             }
