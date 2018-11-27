@@ -10,11 +10,11 @@ pub fn compress_ext(symbol: &Symbol) -> (Symbol, Compress) {
     let mut compress = Compress::new();
 
     let compressed = Symbol {
-        name: compress.compress_qname(&symbol.name),
+        name: compress.compress_abs_path(&symbol.name),
         instantiating_crate: symbol
             .instantiating_crate
             .as_ref()
-            .map(|ic| compress.compress_name_prefix(ic)),
+            .map(|ic| compress.compress_path_prefix(ic)),
     };
 
     #[cfg(test)]
@@ -26,8 +26,8 @@ pub fn compress_ext(symbol: &Symbol) -> (Symbol, Compress) {
 }
 
 pub struct Compress {
-    prefixes: HashMap<Arc<NamePrefix>, Subst>,
-    qnames: HashMap<Arc<QName>, Subst>,
+    prefixes: HashMap<Arc<PathPrefix>, Subst>,
+    abs_paths: HashMap<Arc<AbsolutePath>, Subst>,
     types: HashMap<Arc<Type>, Subst>,
     subst_counter: u64,
 }
@@ -36,44 +36,44 @@ impl Compress {
     fn new() -> Compress {
         Compress {
             prefixes: HashMap::new(),
-            qnames: HashMap::new(),
+            abs_paths: HashMap::new(),
             types: HashMap::new(),
             subst_counter: 0,
         }
     }
 
-    fn compress_name_prefix(&mut self, name_prefix: &Arc<NamePrefix>) -> Arc<NamePrefix> {
-        if let Some(subst) = self.lookup_prefix_subst(name_prefix) {
-            return Arc::new(NamePrefix::Subst(subst));
+    fn compress_path_prefix(&mut self, path_prefix: &Arc<PathPrefix>) -> Arc<PathPrefix> {
+        if let Some(subst) = self.lookup_prefix_subst(path_prefix) {
+            return Arc::new(PathPrefix::Subst(subst));
         }
 
-        let compressed = match **name_prefix {
-            NamePrefix::CrateId { .. } => {
+        let compressed = match **path_prefix {
+            PathPrefix::CrateId { .. } => {
                 // We cannot compress them, just clone the reference to the node
-                name_prefix.clone()
+                path_prefix.clone()
             }
-            NamePrefix::TraitImpl {
+            PathPrefix::TraitImpl {
                 ref self_type,
                 ref impled_trait,
                 dis,
             } => {
                 let compressed_self_type = self.compress_type(self_type);
-                let compressed_impled_trait = self.compress_qname(impled_trait);
+                let compressed_impled_trait = self.compress_abs_path(impled_trait);
 
                 // Don't allocate a new node if it would be the same as the old one
                 if compressed_self_type.same_as(self_type)
                     && compressed_impled_trait.same_as(impled_trait)
                 {
-                    name_prefix.clone()
+                    path_prefix.clone()
                 } else {
-                    Arc::new(NamePrefix::TraitImpl {
+                    Arc::new(PathPrefix::TraitImpl {
                         self_type: compressed_self_type,
                         impled_trait: compressed_impled_trait,
                         dis,
                     })
                 }
             }
-            NamePrefix::InherentImpl { ref self_type } => {
+            PathPrefix::InherentImpl { ref self_type } => {
                 let compressed_self_type = self.compress_type(self_type);
 
                 // NOTE: We return here and thus don't allocate a substitution.
@@ -81,64 +81,64 @@ impl Compress {
                 //
                 // Don't allocate a new node if it would be the same as the old one.
                 return if compressed_self_type.same_as(self_type) {
-                    name_prefix.clone()
+                    path_prefix.clone()
                 } else {
-                    Arc::new(NamePrefix::InherentImpl {
+                    Arc::new(PathPrefix::InherentImpl {
                         self_type: compressed_self_type,
                     })
                 };
             }
-            NamePrefix::Node {
+            PathPrefix::Node {
                 ref prefix,
                 ref ident,
             } => {
-                let compressed_prefix = self.compress_name_prefix(prefix);
+                let compressed_prefix = self.compress_path_prefix(prefix);
 
                 // Don't allocate a new node if it would be the same as the old one
                 if compressed_prefix.same_as(prefix) {
-                    name_prefix.clone()
+                    path_prefix.clone()
                 } else {
-                    Arc::new(NamePrefix::Node {
+                    Arc::new(PathPrefix::Node {
                         prefix: compressed_prefix,
                         ident: ident.clone(),
                     })
                 }
             }
-            NamePrefix::Subst(_) => unreachable!(),
+            PathPrefix::Subst(_) => unreachable!(),
         };
 
-        self.alloc_subst(name_prefix, |d| &mut d.prefixes);
+        self.alloc_subst(path_prefix, |d| &mut d.prefixes);
 
         compressed
     }
 
-    fn compress_qname(&mut self, qname: &Arc<QName>) -> Arc<QName> {
-        if let Some(subst) = self.lookup_qname_subst(qname) {
-            return Arc::new(QName::Subst(subst));
+    fn compress_abs_path(&mut self, abs_path: &Arc<AbsolutePath>) -> Arc<AbsolutePath> {
+        if let Some(subst) = self.lookup_abs_path_subst(abs_path) {
+            return Arc::new(AbsolutePath::Subst(subst));
         }
 
-        match **qname {
-            QName::Name { ref name, ref args } => {
-                let compressed_name = self.compress_name_prefix(name);
+        match **abs_path {
+            AbsolutePath::Path { ref name, ref args } => {
+                let compressed_name = self.compress_path_prefix(name);
                 let compressed_args = self.compress_generic_argument_list(args);
 
                 if !args.is_empty() {
                     // If there are generic arguments, we add a new substitution in
                     // order to capture them.
-                    self.alloc_subst(qname, |d| &mut d.qnames);
+                    self.alloc_subst(abs_path, |d| &mut d.abs_paths);
                 }
 
                 // Don't allocate a new node if it would be the same as the old one
                 if compressed_name.same_as(name) && compressed_args.same_as(args) {
-                    qname.clone()
+                    abs_path.clone()
                 } else {
-                    Arc::new(QName::Name {
+                    Arc::new(AbsolutePath::Path {
                         name: compressed_name,
                         args: compressed_args,
                     })
                 }
             }
-            QName::Subst(_) => unreachable!(),
+            AbsolutePath::Subst(_) => unreachable!(),
         }
     }
 
@@ -162,8 +162,8 @@ impl Compress {
             }
             Type::Named(ref name) => {
                 // NOTE: Always return here so we don't add something to the dictionary.
-                //       Compressing the qname has already taken care of that.
-                return dedup(ty, name, self.compress_qname(name), Type::Named);
+                //       Compressing the abs_path has already taken care of that.
+                return dedup(ty, name, self.compress_abs_path(name), Type::Named);
             }
             Type::Ref(ref inner) => dedup(ty, inner, self.compress_type(inner), Type::Ref),
             Type::RefMut(ref inner) => dedup(ty, inner, self.compress_type(inner), Type::RefMut),
@@ -223,32 +223,32 @@ impl Compress {
         assert!(dict(self).insert(node.clone(), subst).is_none());
     }
 
-    fn lookup_prefix_subst(&self, name_prefix: &NamePrefix) -> Option<Subst> {
-        match *name_prefix {
-            NamePrefix::CrateId { .. } | NamePrefix::TraitImpl { .. } | NamePrefix::Node { .. } => {
-                self.prefixes.get(name_prefix).cloned()
+    fn lookup_prefix_subst(&self, path_prefix: &PathPrefix) -> Option<Subst> {
+        match *path_prefix {
+            PathPrefix::CrateId { .. } | PathPrefix::TraitImpl { .. } | PathPrefix::Node { .. } => {
+                self.prefixes.get(path_prefix).cloned()
             }
-            NamePrefix::InherentImpl { ref self_type } => self.lookup_type_subst(self_type),
-            NamePrefix::Subst(_) => unreachable!(),
+            PathPrefix::InherentImpl { ref self_type } => self.lookup_type_subst(self_type),
+            PathPrefix::Subst(_) => unreachable!(),
         }
     }
 
-    fn lookup_qname_subst(&self, qname: &QName) -> Option<Subst> {
-        match *qname {
-            QName::Name { ref name, ref args } => {
+    fn lookup_abs_path_subst(&self, abs_path: &AbsolutePath) -> Option<Subst> {
+        match *abs_path {
+            AbsolutePath::Path { ref name, ref args } => {
                 if args.is_empty() {
                     self.lookup_prefix_subst(name)
                 } else {
-                    self.qnames.get(qname).cloned()
+                    self.abs_paths.get(abs_path).cloned()
                 }
             }
-            QName::Subst(_) => unreachable!(),
+            AbsolutePath::Subst(_) => unreachable!(),
         }
     }
 
     fn lookup_type_subst(&self, ty: &Type) -> Option<Subst> {
         match *ty {
-            Type::Named(ref qname) => self.lookup_qname_subst(qname),
+            Type::Named(ref abs_path) => self.lookup_abs_path_subst(abs_path),
             Type::Subst(_) => unreachable!(),
             _ => self.types.get(ty).cloned(),
         }
@@ -274,7 +274,7 @@ impl Compress {
         let mut items = vec![];
 
         items.extend(self.prefixes.iter().map(|(k, &v)| (v, k.demangle(true))));
-        items.extend(self.qnames.iter().map(|(k, &v)| (v, k.demangle(true))));
+        items.extend(self.abs_paths.iter().map(|(k, &v)| (v, k.demangle(true))));
         items.extend(self.types.iter().map(|(k, &v)| (v, k.demangle(true))));
 
         DebugDictionary::new(items)
@@ -292,9 +292,10 @@ impl Compress {
         // Check that there are no duplicate substitution indices and no holes
         // in the sequence.
         {
-            let mut all_substs: Vec<_> = self.prefixes
+            let mut all_substs: Vec<_> = self
+                .prefixes
                 .values()
-                .chain(self.qnames.values())
+                .chain(self.abs_paths.values())
                 .chain(self.types.values())
                 .map(|&Subst(idx)| idx)
                 .collect();

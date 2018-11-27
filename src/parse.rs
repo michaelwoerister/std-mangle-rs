@@ -20,7 +20,7 @@ impl<'input> Parser<'input> {
 
         parser.parse_symbol_prefix()?;
 
-        let path = parser.parse_qname().map_err(|s| {
+        let path = parser.parse_abs_path().map_err(|s| {
             format!(
                 "In {:?}: Parsing error at pos {}: {}",
                 str::from_utf8(mangled).unwrap(),
@@ -30,7 +30,7 @@ impl<'input> Parser<'input> {
         })?;
 
         let instantiating_crate = if parser.pos < parser.input.len() {
-            Some(parser.parse_name_prefix()?)
+            Some(parser.parse_path_prefix()?)
         } else {
             None
         };
@@ -174,12 +174,12 @@ impl<'input> Parser<'input> {
         Ok(Ident { ident, tag, dis })
     }
 
-    fn parse_qname(&mut self) -> Result<Arc<QName>, String> {
+    fn parse_abs_path(&mut self) -> Result<Arc<AbsolutePath>, String> {
         match self.cur() {
             b'N' => {
                 self.pos += 1;
 
-                let name = self.parse_name_prefix()?;
+                let name = self.parse_path_prefix()?;
 
                 let args = if self.cur() == b'I' {
                     self.parse_generic_argument_list()?
@@ -188,19 +188,19 @@ impl<'input> Parser<'input> {
                 };
 
                 if self.cur() != b'E' {
-                    return expected("E", self.cur(), "parsing", "<qualified-name>");
+                    return expected("E", self.cur(), "parsing", "<absolute-path>");
                 }
 
                 self.pos += 1;
 
-                Ok(Arc::new(QName::Name { name, args }))
+                Ok(Arc::new(AbsolutePath::Path { name, args }))
             }
             b'S' => {
                 let subst = self.parse_subst()?;
-                Ok(Arc::new(QName::Subst(subst)))
+                Ok(Arc::new(AbsolutePath::Subst(subst)))
             }
             c => {
-                return expected("NS", c, "parsing", "<qualified-name>");
+                return expected("NS", c, "parsing", "<absolute-path>");
             }
         }
     }
@@ -223,18 +223,18 @@ impl<'input> Parser<'input> {
         Ok(Subst(index))
     }
 
-    fn parse_name_prefix(&mut self) -> Result<Arc<NamePrefix>, String> {
+    fn parse_path_prefix(&mut self) -> Result<Arc<PathPrefix>, String> {
         let root = Arc::new(match self.cur() {
-            b'S' => NamePrefix::Subst(self.parse_subst()?),
+            b'S' => PathPrefix::Subst(self.parse_subst()?),
 
             b'X' => {
                 self.pos += 1;
 
                 let self_type = self.parse_type()?;
-                let impled_trait = self.parse_qname()?;
+                let impled_trait = self.parse_abs_path()?;
                 let dis = self.parse_opt_numeric_disambiguator()?;
 
-                NamePrefix::TraitImpl {
+                PathPrefix::TraitImpl {
                     self_type,
                     impled_trait,
                     dis,
@@ -246,14 +246,14 @@ impl<'input> Parser<'input> {
 
                 let self_type = self.parse_type()?;
 
-                NamePrefix::InherentImpl { self_type }
+                PathPrefix::InherentImpl { self_type }
             }
 
             c if c.is_ascii_digit() => {
                 let ident = self.parse_len_prefixed_ident()?;
 
                 if let Some(sep) = ident.ident.rfind('_') {
-                    NamePrefix::CrateId {
+                    PathPrefix::CrateId {
                         name: ident.ident[..sep].to_owned(),
                         dis: ident.ident[sep + 1..].to_owned(),
                     }
@@ -272,7 +272,7 @@ impl<'input> Parser<'input> {
         while self.cur() != EOT && self.cur() != b'E' && self.cur() != b'I' {
             let ident = self.parse_len_prefixed_ident()?;
 
-            path = Arc::new(NamePrefix::Node {
+            path = Arc::new(PathPrefix::Node {
                 prefix: path,
                 ident,
             });
@@ -387,7 +387,7 @@ impl<'input> Parser<'input> {
             b'N' => {
                 // We have to back up here
                 self.pos -= 1;
-                Type::Named(self.parse_qname()?)
+                Type::Named(self.parse_abs_path()?)
             }
 
             b'O' => Type::RawPtrMut(self.parse_type()?),

@@ -1,4 +1,3 @@
-
 //! An alternative implementation of the compression algorithm. It determines
 //! node equivalence via lossless demangling instead of AST structure.
 //! This implementation is slower and meant mainly as a sanity check for the
@@ -21,11 +20,11 @@ pub fn compress_ext(symbol: &Symbol) -> (Symbol, CompressAlt) {
     let mut compress = CompressAlt::new();
 
     let compressed = Symbol {
-        name: compress.compress_qname(&symbol.name),
+        name: compress.compress_abs_path(&symbol.name),
         instantiating_crate: symbol
             .instantiating_crate
             .as_ref()
-            .map(|ic| compress.compress_name_prefix(ic)),
+            .map(|ic| compress.compress_path_prefix(ic)),
     };
 
     (compressed, compress)
@@ -39,44 +38,42 @@ impl CompressAlt {
         }
     }
 
-    fn compress_name_prefix(&mut self, name_prefix: &Arc<NamePrefix>) -> Arc<NamePrefix> {
+    fn compress_path_prefix(&mut self, name_prefix: &Arc<PathPrefix>) -> Arc<PathPrefix> {
         let demangled = name_prefix.demangle(true);
 
         if let Some(&subst) = self.dict.get(&demangled) {
-            return Arc::new(NamePrefix::Subst(subst));
+            return Arc::new(PathPrefix::Subst(subst));
         }
 
         let compressed = match **name_prefix {
-            NamePrefix::CrateId { .. } => {
-                name_prefix.clone()
-            }
-            NamePrefix::TraitImpl {
+            PathPrefix::CrateId { .. } => name_prefix.clone(),
+            PathPrefix::TraitImpl {
                 ref self_type,
                 ref impled_trait,
                 dis,
-            } => Arc::new(NamePrefix::TraitImpl {
+            } => Arc::new(PathPrefix::TraitImpl {
                 self_type: self.compress_type(self_type),
-                impled_trait: self.compress_qname(impled_trait),
+                impled_trait: self.compress_abs_path(impled_trait),
                 dis,
             }),
-            NamePrefix::InherentImpl { ref self_type } => {
+            PathPrefix::InherentImpl { ref self_type } => {
                 // Note: We return here, thereby skipping the substition
                 // allocation below. Compressing the type will already have
                 // allocated an equivalent substitution. If we didn't return
                 // here we would have to check for the basic-type exception
                 // again.
-                return Arc::new(NamePrefix::InherentImpl {
+                return Arc::new(PathPrefix::InherentImpl {
                     self_type: self.compress_type(self_type),
-                })
-            },
-            NamePrefix::Node {
+                });
+            }
+            PathPrefix::Node {
                 ref prefix,
                 ref ident,
-            } => Arc::new(NamePrefix::Node {
-                prefix: self.compress_name_prefix(prefix),
+            } => Arc::new(PathPrefix::Node {
+                prefix: self.compress_path_prefix(prefix),
                 ident: ident.clone(),
             }),
-            NamePrefix::Subst(_) => unreachable!(),
+            PathPrefix::Subst(_) => unreachable!(),
         };
 
         self.alloc_subst(demangled);
@@ -84,19 +81,19 @@ impl CompressAlt {
         compressed
     }
 
-    fn compress_qname(&mut self, qname: &Arc<QName>) -> Arc<QName> {
-        let demangled = qname.demangle(true);
+    fn compress_abs_path(&mut self, abs_path: &Arc<AbsolutePath>) -> Arc<AbsolutePath> {
+        let demangled = abs_path.demangle(true);
 
         if let Some(&subst) = self.dict.get(&demangled) {
-            return Arc::new(QName::Subst(subst));
+            return Arc::new(AbsolutePath::Subst(subst));
         }
 
-        let compressed = match **qname {
-            QName::Name { ref name, ref args } => Arc::new(QName::Name {
-                name: self.compress_name_prefix(name),
+        let compressed = match **abs_path {
+            AbsolutePath::Path { ref name, ref args } => Arc::new(AbsolutePath::Path {
+                name: self.compress_path_prefix(name),
                 args: self.compress_generic_argument_list(args),
             }),
-            QName::Subst(_) => unreachable!(),
+            AbsolutePath::Subst(_) => unreachable!(),
         };
 
         self.alloc_subst(demangled);
@@ -123,7 +120,7 @@ impl CompressAlt {
                 //       basic types.
                 return ty.clone();
             }
-            Type::Named(ref name) => Type::Named(self.compress_qname(name)),
+            Type::Named(ref name) => Type::Named(self.compress_abs_path(name)),
             Type::Ref(ref inner) => Type::Ref(self.compress_type(inner)),
             Type::RefMut(ref inner) => Type::RefMut(self.compress_type(inner)),
             Type::RawPtrConst(ref inner) => Type::RawPtrConst(self.compress_type(inner)),

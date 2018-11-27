@@ -119,7 +119,7 @@ enum Charset {
     Unicode,
 }
 
-impl Arbitrary for QName {
+impl Arbitrary for AbsolutePath {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let len = {
             let s = g.size();
@@ -139,7 +139,7 @@ impl Arbitrary for QName {
             (0, true) => {
                 let mut smaller_rng = get_smaller_rng(g);
 
-                NamePrefix::TraitImpl {
+                PathPrefix::TraitImpl {
                     self_type: Arbitrary::arbitrary(&mut smaller_rng),
                     impled_trait: Arbitrary::arbitrary(&mut smaller_rng),
                     dis: Arbitrary::arbitrary(&mut smaller_rng),
@@ -148,11 +148,11 @@ impl Arbitrary for QName {
             (1, true) => {
                 let mut smaller_rng = get_smaller_rng(g);
 
-                NamePrefix::InherentImpl {
+                PathPrefix::InherentImpl {
                     self_type: Arbitrary::arbitrary(&mut smaller_rng),
                 }
             }
-            _ => NamePrefix::CrateId {
+            _ => PathPrefix::CrateId {
                 name: generate_ident(g, charset, 2).ident,
                 dis: generate_crate_disambiguator(g),
             },
@@ -161,13 +161,13 @@ impl Arbitrary for QName {
         for i in 0..len {
             let max = 2 * (i + 1);
 
-            path = Arc::new(NamePrefix::Node {
+            path = Arc::new(PathPrefix::Node {
                 prefix: path,
                 ident: generate_ident(g, charset, max),
             });
         }
 
-        QName::Name {
+        AbsolutePath::Path {
             name: path,
             args: Arbitrary::arbitrary(g),
         }
@@ -180,7 +180,7 @@ impl Arbitrary for Symbol {
             name: Arbitrary::arbitrary(g),
             instantiating_crate: {
                 if g.next_u32() % 3 == 0 {
-                    Some(Arc::new(NamePrefix::CrateId {
+                    Some(Arc::new(PathPrefix::CrateId {
                         name: generate_ident(g, Charset::Ascii, 3).ident,
                         dis: generate_crate_disambiguator(g),
                     }))

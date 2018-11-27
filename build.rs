@@ -58,7 +58,8 @@ fn emit_test_case_ast(spec_line: &str, title_line: &str, output: &mut impl Write
             .replace(" ", "_")
             .replace("/", "_")
             .replace(",", "_")
-            .replace("-", "_") + "_ast";
+            .replace("-", "_")
+            + "_ast";
 
         if verbose {
             title += "_verbose";
@@ -101,7 +102,8 @@ fn emit_test_case_direct(
             .replace(" ", "_")
             .replace("/", "_")
             .replace(",", "_")
-            .replace("-", "_") + "_direct";
+            .replace("-", "_")
+            + "_direct";
 
         if verbose {
             title += "_verbose";

@@ -26,30 +26,30 @@ pub const SUBST_RADIX: u8 = 16;
 pub struct Subst(pub u64);
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-pub enum NamePrefix {
+pub enum PathPrefix {
     CrateId {
         name: String,
         dis: String,
     },
     TraitImpl {
         self_type: Arc<Type>,
-        impled_trait: Arc<QName>,
+        impled_trait: Arc<AbsolutePath>,
         dis: NumericDisambiguator,
     },
     InherentImpl {
         self_type: Arc<Type>,
     },
     Node {
-        prefix: Arc<NamePrefix>,
+        prefix: Arc<PathPrefix>,
         ident: Ident,
     },
     Subst(Subst),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-pub enum QName {
-    Name {
-        name: Arc<NamePrefix>,
+pub enum AbsolutePath {
+    Path {
+        name: Arc<PathPrefix>,
         args: GenericArgumentList,
     },
     Subst(Subst),
@@ -67,7 +67,7 @@ pub enum Type {
     RawPtrMut(Arc<Type>),
     Array(Option<u64>, Arc<Type>),
     Tuple(Vec<Arc<Type>>),
-    Named(Arc<QName>),
+    Named(Arc<AbsolutePath>),
     GenericParam(Ident),
     Fn {
         is_unsafe: bool,
@@ -117,8 +117,8 @@ pub enum BasicType {
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Symbol {
-    pub name: Arc<QName>,
-    pub instantiating_crate: Option<Arc<NamePrefix>>,
+    pub name: Arc<AbsolutePath>,
+    pub instantiating_crate: Option<Arc<PathPrefix>>,
 }
 
 impl GenericArgumentList {

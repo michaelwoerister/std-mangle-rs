@@ -49,13 +49,13 @@ impl Subst {
     }
 }
 
-impl NamePrefix {
+impl PathPrefix {
     pub fn mangle(&self, out: &mut String) {
         match *self {
-            NamePrefix::CrateId { ref name, ref dis } => {
+            PathPrefix::CrateId { ref name, ref dis } => {
                 charset::write_len_prefixed_ident(&[name, "_", dis], out).unwrap();
             }
-            NamePrefix::TraitImpl {
+            PathPrefix::TraitImpl {
                 ref self_type,
                 ref impled_trait,
                 dis,
@@ -65,34 +65,34 @@ impl NamePrefix {
                 impled_trait.mangle(out);
                 dis.mangle(out);
             }
-            NamePrefix::InherentImpl { ref self_type } => {
+            PathPrefix::InherentImpl { ref self_type } => {
                 out.push('M');
                 self_type.mangle(out);
             }
-            NamePrefix::Node {
+            PathPrefix::Node {
                 ref prefix,
                 ref ident,
             } => {
                 prefix.mangle(out);
                 ident.mangle(out);
             }
-            NamePrefix::Subst(subst) => {
+            PathPrefix::Subst(subst) => {
                 subst.mangle(out);
             }
         }
     }
 }
 
-impl QName {
+impl AbsolutePath {
     pub fn mangle(&self, out: &mut String) {
         match *self {
-            QName::Name { ref name, ref args } => {
+            AbsolutePath::Path { ref name, ref args } => {
                 out.push('N');
                 name.mangle(out);
                 args.mangle(out);
                 out.push('E');
             }
-            QName::Subst(subst) => {
+            AbsolutePath::Subst(subst) => {
                 subst.mangle(out);
             }
         }
@@ -147,8 +147,8 @@ impl Type {
                 }
                 out.push('E');
             }
-            Type::Named(ref qname) => {
-                qname.mangle(out);
+            Type::Named(ref abs_path) => {
+                abs_path.mangle(out);
             }
             Type::GenericParam(ref ident) => {
                 out.push('G');

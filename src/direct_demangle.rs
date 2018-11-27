@@ -48,8 +48,7 @@ impl<'input> Demangler<'input> {
                     ::ast::Subst(idx as u64),
                     String::from_utf8(state.out[start..end].to_owned()).unwrap(),
                 )
-            })
-            .collect();
+            }).collect();
 
         let debug_dict = DebugDictionary::new(debug_dict);
 
@@ -94,13 +93,13 @@ impl<'input> Demangler<'input> {
             return error::version_mismatch(encoding_version, 0);
         }
 
-        // The qualified name
-        self.demangle_qname()?;
+        // The absolute path
+        self.demangle_abs_path()?;
 
         // The (optional) instantiating crate
         if self.cur() != EOT && self.verbose {
             self.out.extend_from_slice(b" @ ");
-            self.demangle_name_prefix()
+            self.demangle_path_prefix()
         } else {
             Ok(())
         }
@@ -154,13 +153,13 @@ impl<'input> Demangler<'input> {
         Ok(value)
     }
 
-    fn demangle_qname(&mut self) -> Result<(), String> {
+    fn demangle_abs_path(&mut self) -> Result<(), String> {
         match self.cur() {
             b'N' => {
                 let subst_start = self.out.len();
                 self.pos += 1;
 
-                self.demangle_name_prefix()?;
+                self.demangle_path_prefix()?;
 
                 if self.cur() == b'I' {
                     self.demangle_generic_argument_list()?;
@@ -171,7 +170,7 @@ impl<'input> Demangler<'input> {
                 }
 
                 if self.cur() != b'E' {
-                    return expected("E", self.cur(), "demangling", "<qualified-name>");
+                    return expected("E", self.cur(), "demangling", "<absolute-path>");
                 }
 
                 self.pos += 1;
@@ -182,7 +181,7 @@ impl<'input> Demangler<'input> {
             }
 
             c => {
-                return expected("NS", c, "demangling", "<qualified_name>");
+                return expected("NS", c, "demangling", "<absolute-path>");
             }
         }
 
@@ -270,7 +269,7 @@ impl<'input> Demangler<'input> {
         Ok(())
     }
 
-    fn demangle_name_prefix(&mut self) -> Result<(), String> {
+    fn demangle_path_prefix(&mut self) -> Result<(), String> {
         let subst_start = self.out.len();
 
         // parse the root
@@ -286,7 +285,7 @@ impl<'input> Demangler<'input> {
                 self.out.push(b'<');
                 self.demangle_type()?;
                 self.out.extend_from_slice(b" as ");
-                self.demangle_qname()?;
+                self.demangle_abs_path()?;
                 self.out.push(b'>');
 
                 let index = self.parse_opt_numeric_disambiguator()?;
@@ -480,7 +479,7 @@ impl<'input> Demangler<'input> {
 
             b'N' => {
                 self.pos -= 1;
-                self.demangle_qname()?;
+                self.demangle_abs_path()?;
                 // Return because we don't want to add a subst
                 return Ok(());
             }

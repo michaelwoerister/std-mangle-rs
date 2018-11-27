@@ -45,16 +45,16 @@ impl AstDemangle for Subst {
     }
 }
 
-impl AstDemangle for NamePrefix {
+impl AstDemangle for PathPrefix {
     fn demangle_to_string(&self, out: &mut String, verbose: bool) {
         match *self {
-            NamePrefix::CrateId { ref name, ref dis } => {
+            PathPrefix::CrateId { ref name, ref dis } => {
                 out.push_str(name);
                 if verbose {
                     write!(out, "[{}]", dis).unwrap();
                 }
             }
-            NamePrefix::TraitImpl {
+            PathPrefix::TraitImpl {
                 ref self_type,
                 ref impled_trait,
                 dis,
@@ -69,10 +69,10 @@ impl AstDemangle for NamePrefix {
                     write!(out, "[{}]", dis.0 + 1).unwrap();
                 }
             }
-            NamePrefix::InherentImpl { ref self_type } => {
+            PathPrefix::InherentImpl { ref self_type } => {
                 self_type.demangle_to_string(out, verbose);
             }
-            NamePrefix::Node {
+            PathPrefix::Node {
                 ref prefix,
                 ref ident,
             } => {
@@ -80,21 +80,21 @@ impl AstDemangle for NamePrefix {
                 out.push_str("::");
                 ident.demangle_to_string(out, verbose);
             }
-            NamePrefix::Subst(subst) => {
+            PathPrefix::Subst(subst) => {
                 subst.demangle_to_string(out, verbose);
             }
         }
     }
 }
 
-impl AstDemangle for QName {
+impl AstDemangle for AbsolutePath {
     fn demangle_to_string(&self, out: &mut String, verbose: bool) {
         match *self {
-            QName::Name { ref name, ref args } => {
+            AbsolutePath::Path { ref name, ref args } => {
                 name.demangle_to_string(out, verbose);
                 args.demangle_to_string(out, verbose);
             }
-            QName::Subst(subst) => {
+            AbsolutePath::Subst(subst) => {
                 subst.demangle_to_string(out, verbose);
             }
         }
@@ -156,8 +156,8 @@ impl AstDemangle for Type {
                 out.pop();
                 out.push(')');
             }
-            Type::Named(ref qname) => {
-                qname.demangle_to_string(out, verbose);
+            Type::Named(ref abs_path) => {
+                abs_path.demangle_to_string(out, verbose);
             }
             Type::GenericParam(ref ident) => {
                 ident.demangle_to_string(out, verbose);

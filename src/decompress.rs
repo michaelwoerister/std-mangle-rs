@@ -6,8 +6,8 @@ use std::sync::Arc;
 use debug::DebugDictionary;
 
 pub struct Decompress {
-    name_prefixes: HashMap<Subst, Arc<NamePrefix>>,
-    qnames: HashMap<Subst, Arc<QName>>,
+    path_prefixes: HashMap<Subst, Arc<PathPrefix>>,
+    abs_paths: HashMap<Subst, Arc<AbsolutePath>>,
     types: HashMap<Subst, Arc<Type>>,
     subst_counter: u64,
 }
@@ -25,48 +25,48 @@ impl Decompress {
 
     fn decompress_symbol(&mut self, symbol: &Symbol) -> Symbol {
         Symbol {
-            name: self.decompress_qname(&symbol.name),
+            name: self.decompress_abs_path(&symbol.name),
             instantiating_crate: symbol
                 .instantiating_crate
                 .as_ref()
-                .map(|ic| self.decompress_name_prefix(ic)),
+                .map(|ic| self.decompress_path_prefix(ic)),
         }
     }
 
-    fn decompress_qname(&mut self, qname: &Arc<QName>) -> Arc<QName> {
-        match **qname {
-            QName::Name { ref name, ref args } => {
-                let new_name_prefix = self.decompress_name_prefix(name);
+    fn decompress_abs_path(&mut self, abs_path: &Arc<AbsolutePath>) -> Arc<AbsolutePath> {
+        match **abs_path {
+            AbsolutePath::Path { ref name, ref args } => {
+                let new_path_prefix = self.decompress_path_prefix(name);
                 let decompressed_args = self.decompress_generic_parameter_list(args);
 
                 let decompressed =
-                    if Arc::ptr_eq(name, &new_name_prefix) && decompressed_args.ptr_eq(args) {
-                        qname.clone()
+                    if Arc::ptr_eq(name, &new_path_prefix) && decompressed_args.ptr_eq(args) {
+                        abs_path.clone()
                     } else {
-                        Arc::new(QName::Name {
-                            name: new_name_prefix,
+                        Arc::new(AbsolutePath::Path {
+                            name: new_path_prefix,
                             args: decompressed_args,
                         })
                     };
 
                 if !args.is_empty() {
-                    self.alloc_subst(&decompressed, |this| &mut this.qnames);
+                    self.alloc_subst(&decompressed, |this| &mut this.abs_paths);
                 }
 
                 decompressed
             }
 
-            QName::Subst(ref subst) => {
-                if let Some(qname) = self.qnames.get(subst) {
-                    qname.clone()
-                } else if let Some(prefix) = self.name_prefixes.get(subst) {
-                    Arc::new(QName::Name {
+            AbsolutePath::Subst(ref subst) => {
+                if let Some(abs_path) = self.abs_paths.get(subst) {
+                    abs_path.clone()
+                } else if let Some(prefix) = self.path_prefixes.get(subst) {
+                    Arc::new(AbsolutePath::Path {
                         name: prefix.clone(),
                         args: GenericArgumentList::new_empty(),
                     })
                 } else if let Some(ty) = self.types.get(subst) {
-                    Arc::new(QName::Name {
-                        name: Arc::new(NamePrefix::InherentImpl {
+                    Arc::new(AbsolutePath::Path {
+                        name: Arc::new(PathPrefix::InherentImpl {
                             self_type: ty.clone(),
                         }),
                         args: GenericArgumentList::new_empty(),
@@ -78,69 +78,69 @@ impl Decompress {
         }
     }
 
-    fn decompress_name_prefix(&mut self, name_prefix: &Arc<NamePrefix>) -> Arc<NamePrefix> {
-        let decompressed = match **name_prefix {
-            NamePrefix::CrateId { .. } => name_prefix.clone(),
-            NamePrefix::TraitImpl {
+    fn decompress_path_prefix(&mut self, path_prefix: &Arc<PathPrefix>) -> Arc<PathPrefix> {
+        let decompressed = match **path_prefix {
+            PathPrefix::CrateId { .. } => path_prefix.clone(),
+            PathPrefix::TraitImpl {
                 ref self_type,
                 ref impled_trait,
                 dis,
             } => {
                 let decompressed_self_type = self.decompress_type(self_type);
-                let decompressed_impled_trait = self.decompress_qname(impled_trait);
+                let decompressed_impled_trait = self.decompress_abs_path(impled_trait);
 
                 if Arc::ptr_eq(self_type, &decompressed_self_type)
                     && Arc::ptr_eq(impled_trait, &decompressed_impled_trait)
                 {
-                    name_prefix.clone()
+                    path_prefix.clone()
                 } else {
-                    Arc::new(NamePrefix::TraitImpl {
+                    Arc::new(PathPrefix::TraitImpl {
                         self_type: decompressed_self_type,
                         impled_trait: decompressed_impled_trait,
                         dis,
                     })
                 }
             }
-            NamePrefix::InherentImpl { ref self_type } => {
+            PathPrefix::InherentImpl { ref self_type } => {
                 let decompressed_self_type = self.decompress_type(self_type);
 
                 // NOTE: We return here, that is, without allocating a
                 //       substitution.
                 return if Arc::ptr_eq(self_type, &decompressed_self_type) {
-                    name_prefix.clone()
+                    path_prefix.clone()
                 } else {
-                    Arc::new(NamePrefix::InherentImpl {
+                    Arc::new(PathPrefix::InherentImpl {
                         self_type: decompressed_self_type,
                     })
                 };
             }
-            NamePrefix::Node {
+            PathPrefix::Node {
                 ref prefix,
                 ref ident,
             } => {
-                let decompressed_prefix = self.decompress_name_prefix(prefix);
+                let decompressed_prefix = self.decompress_path_prefix(prefix);
 
                 if Arc::ptr_eq(prefix, &decompressed_prefix) {
-                    name_prefix.clone()
+                    path_prefix.clone()
                 } else {
-                    Arc::new(NamePrefix::Node {
+                    Arc::new(PathPrefix::Node {
                         prefix: decompressed_prefix,
                         ident: ident.clone(),
                     })
                 }
             }
-            NamePrefix::Subst(ref subst) => {
+            PathPrefix::Subst(ref subst) => {
                 // NOTE: We return here, that is, without allocating a
                 //       substitution.
-                return if let Some(prefix) = self.name_prefixes.get(subst) {
+                return if let Some(prefix) = self.path_prefixes.get(subst) {
                     prefix.clone()
                 } else if let Some(ty) = self.types.get(subst) {
-                    Arc::new(NamePrefix::InherentImpl {
+                    Arc::new(PathPrefix::InherentImpl {
                         self_type: ty.clone(),
                     })
-                } else if let Some(qname) = self.qnames.get(subst) {
-                    Arc::new(NamePrefix::InherentImpl {
-                        self_type: Arc::new(Type::Named(qname.clone())),
+                } else if let Some(abs_path) = self.abs_paths.get(subst) {
+                    Arc::new(PathPrefix::InherentImpl {
+                        self_type: Arc::new(Type::Named(abs_path.clone())),
                     })
                 } else {
                     unreachable!()
@@ -148,7 +148,7 @@ impl Decompress {
             }
         };
 
-        self.alloc_subst(&decompressed, |this| &mut this.name_prefixes);
+        self.alloc_subst(&decompressed, |this| &mut this.path_prefixes);
 
         decompressed
     }
@@ -227,14 +227,14 @@ impl Decompress {
                     Arc::new(Type::Tuple(decompressed_components))
                 }
             }
-            Type::Named(ref qname) => {
-                let decompressed_qname = self.decompress_qname(qname);
+            Type::Named(ref abs_path) => {
+                let decompressed_abs_path = self.decompress_abs_path(abs_path);
 
                 // Exit here!
-                return if Arc::ptr_eq(qname, &decompressed_qname) {
+                return if Arc::ptr_eq(abs_path, &decompressed_abs_path) {
                     compressed.clone()
                 } else {
-                    Arc::new(Type::Named(decompressed_qname))
+                    Arc::new(Type::Named(decompressed_abs_path))
                 };
             }
             Type::Fn {
@@ -255,11 +255,10 @@ impl Decompress {
                     _ => unreachable!(),
                 };
 
-                if return_types_same
-                    && decompressed_params
-                        .iter()
-                        .zip(params.iter())
-                        .all(|(a, b)| Arc::ptr_eq(a, b))
+                if return_types_same && decompressed_params
+                    .iter()
+                    .zip(params.iter())
+                    .all(|(a, b)| Arc::ptr_eq(a, b))
                 {
                     compressed.clone()
                 } else {
@@ -275,10 +274,10 @@ impl Decompress {
             Type::Subst(ref subst) => {
                 return if let Some(t) = self.types.get(subst) {
                     t.clone()
-                } else if let Some(qname) = self.qnames.get(subst) {
-                    Arc::new(Type::Named(qname.clone()))
-                } else if let Some(prefix) = self.name_prefixes.get(subst) {
-                    Arc::new(Type::Named(Arc::new(QName::Name {
+                } else if let Some(abs_path) = self.abs_paths.get(subst) {
+                    Arc::new(Type::Named(abs_path.clone()))
+                } else if let Some(prefix) = self.path_prefixes.get(subst) {
+                    Arc::new(Type::Named(Arc::new(AbsolutePath::Path {
                         name: prefix.clone(),
                         args: GenericArgumentList::new_empty(),
                     })))
@@ -296,8 +295,8 @@ impl Decompress {
 
 pub fn decompress_ext(symbol: &Symbol) -> (Symbol, Decompress) {
     let mut state = Decompress {
-        qnames: HashMap::new(),
-        name_prefixes: HashMap::new(),
+        abs_paths: HashMap::new(),
+        path_prefixes: HashMap::new(),
         types: HashMap::new(),
         subst_counter: 0,
     };
@@ -313,13 +312,13 @@ impl Decompress {
         let mut items = vec![];
 
         items.extend(
-            self.name_prefixes
+            self.path_prefixes
                 .iter()
                 .map(|(&subst, ast)| (subst, ast.demangle(true))),
         );
 
         items.extend(
-            self.qnames
+            self.abs_paths
                 .iter()
                 .map(|(&subst, ast)| (subst, ast.demangle(true))),
         );

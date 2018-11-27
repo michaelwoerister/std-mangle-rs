@@ -349,7 +349,7 @@ _RNXlN7foo_xxx3BarIxEE4quuxV1_Cs_IcEE <i32 as foo[xxx]::Bar<i64>>::quux'::{closu
 
 ## Compression
 
-# Compressed name prefix as qname
+# Compressed name prefix as absolute path
 _RNXN7std_xxx3foo3FooES0_3barVE <std[xxx]::foo::Foo as std[xxx]::foo>::bar'
                                 <std::foo::Foo as std::foo>::bar
 
