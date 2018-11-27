@@ -77,7 +77,7 @@ _RN7std_xxx3FooIvEE std[xxx]::Foo<...>
 
 # Static at crate level
 _RN16mycrate_abcd123f3FOOVE mycrate[abcd123f]::FOO'
-                             mycrate::FOO
+                            mycrate::FOO
 # Static in module
 _RN16mycrate_abcd123f3bar3FOOVE mycrate[abcd123f]::bar::FOO'
                                 mycrate::bar::FOO
@@ -105,8 +105,8 @@ _RN16mycrate_abcd123f3foos0_3BARVE mycrate[abcd123f]::foo[3]::BAR'
                                    mycrate::foo::BAR
 
 # Static with closure in path
-_RN16mycrate_abcd123f3fooV1_C4QUUXVE mycrate[abcd123f]::foo'::{closure}[1]::QUUX'
-                                     mycrate::foo::{closure}[1]::QUUX
+_RN16mycrate_abcd123f3fooV0C4QUUXVE mycrate[abcd123f]::foo'::{closure}[1]::QUUX'
+                                    mycrate::foo::{closure}[1]::QUUX
 
 # Static with generic inherent impl in path
 _RNMN7std_xxx3FooIG1TEEE4quuxV3BARVE std[xxx]::Foo<T>::quux'::BAR'
@@ -155,8 +155,8 @@ _RN16mycrate_abcd123f3foos0_4quuxVE mycrate[abcd123f]::foo[3]::quux'
                                     mycrate::foo::quux
 
 # Free-standing function with closure in path
-_RN16mycrate_abcd123f3foo1_C3barVE mycrate[abcd123f]::foo::{closure}[1]::bar'
-                                   mycrate::foo::{closure}[1]::bar
+_RN16mycrate_abcd123f3foo0C3barVE mycrate[abcd123f]::foo::{closure}[1]::bar'
+                                  mycrate::foo::{closure}[1]::bar
 
 # Free-standing function with trait impl in path
 _RNXReN11mycrate_xyz3FooE3foo6helperVE <&str as mycrate[xyz]::Foo>::foo::helper'
@@ -221,8 +221,8 @@ _RN16mycrate_abcd123f3bazVIG1Ts9_EEE mycrate[abcd123f]::baz'<T[12]>
 ...
 
 # Generic function with closure type argument
-_RN16mycrate_abcd123f3bazVIN16mycrate_abcd123f3fooV1_Cs0_EEE mycrate[abcd123f]::baz'<mycrate[abcd123f]::foo'::{closure}[3]>
-                                                             mycrate::baz<mycrate::foo::{closure}[3]>
+_RN16mycrate_abcd123f3bazVIN16mycrate_abcd123f3fooV0Cs0_EEE mycrate[abcd123f]::baz'<mycrate[abcd123f]::foo'::{closure}[3]>
+                                                            mycrate::baz<mycrate::foo::{closure}[3]>
 
 # Generic function with disambiguated named type arguments
 _RN16mycrate_abcd123f3bazVIN16mycrate_abcd123f3Foos_EEE mycrate[abcd123f]::baz'<mycrate[abcd123f]::Foo[2]>
@@ -327,24 +327,24 @@ _RNXN14some_crate_yyy3Bars_EN7std_xxx3FooE4quuxVE <some_crate[yyy]::Bar[2] as st
 ## Closures
 
 # Closure in free-standing function
-_RN7std_xxx3fooV1_Cs0_E std[xxx]::foo'::{closure}[3]
-                        std::foo::{closure}[3]
+_RN7std_xxx3fooV0Cs0_E std[xxx]::foo'::{closure}[3]
+                       std::foo::{closure}[3]
 
 # Closure in generic free-standing function
-_RN7std_xxx3fooV1_Cs0_IiEE std[xxx]::foo'::{closure}[3]<isize>
-                        std::foo::{closure}[3]<isize>
+_RN7std_xxx3fooV0Cs0_IiEE std[xxx]::foo'::{closure}[3]<isize>
+                          std::foo::{closure}[3]<isize>
 
 # Closure in closure
-_RN7std_xxx3fooV1_Cs0_1_CE std[xxx]::foo'::{closure}[3]::{closure}[1]
-                           std::foo::{closure}[3]::{closure}[1]
+_RN7std_xxx3fooV0Cs0_0CE std[xxx]::foo'::{closure}[3]::{closure}[1]
+                         std::foo::{closure}[3]::{closure}[1]
 
 # Closure in inherent method
-_RNMm3fooV1_Cs_E u32::foo'::{closure}[2]
-                 u32::foo::{closure}[2]
+_RNMm3fooV0Cs_E u32::foo'::{closure}[2]
+                u32::foo::{closure}[2]
 
 # Closure in trait method
-_RNXlN7foo_xxx3BarIxEE4quuxV1_Cs_IcEE <i32 as foo[xxx]::Bar<i64>>::quux'::{closure}[2]<char>
-                                      <i32 as foo::Bar<i64>>::quux::{closure}[2]<char>
+_RNXlN7foo_xxx3BarIxEE4quuxV0Cs_IcEE <i32 as foo[xxx]::Bar<i64>>::quux'::{closure}[2]<char>
+                                     <i32 as foo::Bar<i64>>::quux::{closure}[2]<char>
 
 
 ## Compression
