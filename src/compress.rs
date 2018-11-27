@@ -1,5 +1,4 @@
 use ast::*;
-use same::Same;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -56,54 +55,25 @@ impl Compress {
                 ref self_type,
                 ref impled_trait,
                 dis,
-            } => {
-                let compressed_self_type = self.compress_type(self_type);
-                let compressed_impled_trait = self.compress_abs_path(impled_trait);
-
-                // Don't allocate a new node if it would be the same as the old one
-                if compressed_self_type.same_as(self_type)
-                    && compressed_impled_trait.same_as(impled_trait)
-                {
-                    path_prefix.clone()
-                } else {
-                    Arc::new(PathPrefix::TraitImpl {
-                        self_type: compressed_self_type,
-                        impled_trait: compressed_impled_trait,
-                        dis,
-                    })
-                }
-            }
+            } => Arc::new(PathPrefix::TraitImpl {
+                self_type: self.compress_type(self_type),
+                impled_trait: self.compress_abs_path(impled_trait),
+                dis,
+            }),
             PathPrefix::InherentImpl { ref self_type } => {
-                let compressed_self_type = self.compress_type(self_type);
-
                 // NOTE: We return here and thus don't allocate a substitution.
                 //       Compressing `self_type` has already introduced one.
-                //
-                // Don't allocate a new node if it would be the same as the old one.
-                return if compressed_self_type.same_as(self_type) {
-                    path_prefix.clone()
-                } else {
-                    Arc::new(PathPrefix::InherentImpl {
-                        self_type: compressed_self_type,
-                    })
-                };
+                return Arc::new(PathPrefix::InherentImpl {
+                    self_type: self.compress_type(self_type),
+                });
             }
             PathPrefix::Node {
                 ref prefix,
                 ref ident,
-            } => {
-                let compressed_prefix = self.compress_path_prefix(prefix);
-
-                // Don't allocate a new node if it would be the same as the old one
-                if compressed_prefix.same_as(prefix) {
-                    path_prefix.clone()
-                } else {
-                    Arc::new(PathPrefix::Node {
-                        prefix: compressed_prefix,
-                        ident: ident.clone(),
-                    })
-                }
-            }
+            } => Arc::new(PathPrefix::Node {
+                prefix: self.compress_path_prefix(prefix),
+                ident: ident.clone(),
+            }),
             PathPrefix::Subst(_) => unreachable!(),
         };
 
@@ -128,15 +98,10 @@ impl Compress {
                     self.alloc_subst(abs_path, |d| &mut d.abs_paths);
                 }
 
-                // Don't allocate a new node if it would be the same as the old one
-                if compressed_name.same_as(name) && compressed_args.same_as(args) {
-                    abs_path.clone()
-                } else {
-                    Arc::new(AbsolutePath::Path {
-                        name: compressed_name,
-                        args: compressed_args,
-                    })
-                }
+                Arc::new(AbsolutePath::Path {
+                    name: compressed_name,
+                    args: compressed_args,
+                })
             }
             AbsolutePath::Subst(_) => unreachable!(),
         }
@@ -163,54 +128,34 @@ impl Compress {
             Type::Named(ref name) => {
                 // NOTE: Always return here so we don't add something to the dictionary.
                 //       Compressing the abs_path has already taken care of that.
-                return dedup(ty, name, self.compress_abs_path(name), Type::Named);
+                return Arc::new(Type::Named(self.compress_abs_path(name)));
             }
-            Type::Ref(ref inner) => dedup(ty, inner, self.compress_type(inner), Type::Ref),
-            Type::RefMut(ref inner) => dedup(ty, inner, self.compress_type(inner), Type::RefMut),
-            Type::RawPtrConst(ref inner) => {
-                dedup(ty, inner, self.compress_type(inner), Type::RawPtrConst)
-            }
-            Type::RawPtrMut(ref inner) => {
-                dedup(ty, inner, self.compress_type(inner), Type::RawPtrMut)
-            }
-            Type::Array(opt_size, ref inner) => {
-                dedup(ty, inner, self.compress_type(inner), |inner| {
-                    Type::Array(opt_size, inner)
-                })
-            }
+            Type::Ref(ref inner) => Type::Ref(self.compress_type(inner)),
+            Type::RefMut(ref inner) => Type::RefMut(self.compress_type(inner)),
+            Type::RawPtrConst(ref inner) => Type::RawPtrConst(self.compress_type(inner)),
+            Type::RawPtrMut(ref inner) => Type::RawPtrMut(self.compress_type(inner)),
+            Type::Array(opt_size, ref inner) => Type::Array(opt_size, self.compress_type(inner)),
             Type::Tuple(ref tys) => {
-                let compressed_tys: Vec<_> = tys.iter().map(|t| self.compress_type(t)).collect();
-                dedup(ty, tys, compressed_tys, Type::Tuple)
+                Type::Tuple(tys.iter().map(|t| self.compress_type(t)).collect())
             }
             Type::Fn {
                 is_unsafe,
                 abi,
                 ref params,
                 ref return_type,
-            } => {
-                let compressed_params: Vec<_> =
-                    params.iter().map(|t| self.compress_type(t)).collect();
-                let compressed_return_type = return_type.as_ref().map(|t| self.compress_type(t));
-
-                if compressed_params.same_as(params) && compressed_return_type.same_as(return_type)
-                {
-                    ty.clone()
-                } else {
-                    Arc::new(Type::Fn {
-                        is_unsafe,
-                        abi,
-                        params: compressed_params,
-                        return_type: compressed_return_type,
-                    })
-                }
-            }
-            Type::GenericParam(_) => ty.clone(),
+            } => Type::Fn {
+                is_unsafe,
+                abi,
+                params: params.iter().map(|t| self.compress_type(t)).collect(),
+                return_type: return_type.as_ref().map(|t| self.compress_type(t)),
+            },
+            Type::GenericParam(_) => (**ty).clone(),
             Type::Subst(_) => unreachable!(),
         };
 
         self.alloc_subst(ty, |d| &mut d.types);
 
-        compressed
+        Arc::new(compressed)
     }
 
     fn alloc_subst<T, D>(&mut self, node: &Arc<T>, dict: D)
@@ -252,17 +197,6 @@ impl Compress {
             Type::Subst(_) => unreachable!(),
             _ => self.types.get(ty).cloned(),
         }
-    }
-}
-
-fn dedup<T, I: Same, M>(outer: &Arc<T>, inner: &I, compressed_inner: I, make: M) -> Arc<T>
-where
-    M: FnOnce(I) -> T,
-{
-    if compressed_inner.same_as(inner) {
-        outer.clone()
-    } else {
-        Arc::new(make(compressed_inner))
     }
 }
 
