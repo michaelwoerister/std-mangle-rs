@@ -8,8 +8,8 @@ extern crate rand;
 
 pub mod ast;
 
-pub mod compress_fast;
-pub mod compress_ref;
+pub mod compress;
+pub mod compress_alt;
 pub mod decompress;
 
 pub mod ast_demangle;
@@ -57,7 +57,7 @@ pub fn ast_to_demangled_symbol(symbol_ast: &ast::Symbol, verbose: bool) -> Strin
 /// Compresses a symbol name's AST by replacing already encounters sub-trees
 /// with substitutions. Panics if the AST already contains substitutions.
 pub fn compress_ast(symbol_ast: &ast::Symbol) -> ast::Symbol {
-    compress_fast::compress_ext(symbol_ast).0
+    compress::compress_ext(symbol_ast).0
 }
 
 /// Decompresses a symbol name's AST by expanding substitutions to the sub-trees

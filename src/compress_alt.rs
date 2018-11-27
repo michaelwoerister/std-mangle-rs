@@ -1,3 +1,9 @@
+
+//! An alternative implementation of the compression algorithm. It determines
+//! node equivalence via lossless demangling instead of AST structure.
+//! This implementation is slower and meant mainly as a sanity check for the
+//! regular implementation.
+
 use ast::*;
 use ast_demangle::AstDemangle;
 use std::collections::HashMap;
@@ -6,13 +12,13 @@ use std::sync::Arc;
 #[cfg(test)]
 use debug::DebugDictionary;
 
-pub struct CompressRef {
+pub struct CompressAlt {
     dict: HashMap<String, Subst>,
     subst_counter: u64,
 }
 
-pub fn compress_ext(symbol: &Symbol) -> (Symbol, CompressRef) {
-    let mut compress = CompressRef::new();
+pub fn compress_ext(symbol: &Symbol) -> (Symbol, CompressAlt) {
+    let mut compress = CompressAlt::new();
 
     let compressed = Symbol {
         name: compress.compress_qname(&symbol.name),
@@ -25,9 +31,9 @@ pub fn compress_ext(symbol: &Symbol) -> (Symbol, CompressRef) {
     (compressed, compress)
 }
 
-impl CompressRef {
-    fn new() -> CompressRef {
-        CompressRef {
+impl CompressAlt {
+    fn new() -> CompressAlt {
+        CompressAlt {
             dict: HashMap::new(),
             subst_counter: 0,
         }
@@ -156,7 +162,7 @@ impl CompressRef {
 }
 
 #[cfg(test)]
-impl CompressRef {
+impl CompressAlt {
     pub fn to_debug_dictionary(&self) -> DebugDictionary {
         DebugDictionary::new(
             self.dict
