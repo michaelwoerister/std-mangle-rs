@@ -8,7 +8,7 @@ pub enum IdentTag {
     Closure,
 }
 
-pub const NUMERIC_DISAMBIGUATOR_RADIX: u8 = 16;
+pub const NUMERIC_DISAMBIGUATOR_RADIX: u8 = 62;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub struct NumericDisambiguator(pub u64);
@@ -20,7 +20,7 @@ pub struct Ident {
     pub dis: NumericDisambiguator,
 }
 
-pub const SUBST_RADIX: u8 = 16;
+pub const SUBST_RADIX: u8 = 62;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub struct Subst(pub u64);

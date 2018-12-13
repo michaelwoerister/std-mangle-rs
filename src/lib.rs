@@ -19,6 +19,7 @@ pub mod parse;
 
 mod charset;
 mod error;
+mod int_radix;
 mod same;
 
 #[cfg(test)]

@@ -1,6 +1,7 @@
 use ast::*;
 use charset;
 use error::{self, expected};
+use int_radix::ascii_digit_to_value;
 use std::str;
 use std::sync::Arc;
 
@@ -101,22 +102,7 @@ impl<'input> Parser<'input> {
     }
 
     fn parse_number(&mut self, radix: u8) -> Result<u64, String> {
-        let to_digit = |byte| {
-            let value = match byte {
-                b'0'..=b'9' => byte - b'0',
-                b'a'..=b'z' => (byte - b'a') + 10,
-                b'A'..=b'Z' => (byte - b'A') + 10,
-                _ => return None,
-            };
-
-            if value < radix {
-                Some(value)
-            } else {
-                None
-            }
-        };
-
-        if to_digit(self.cur()).is_none() {
+        if ascii_digit_to_value(self.cur(), radix).is_none() {
             return Err(format!(
                 "Expected base-{} digit; found '{}' instead;",
                 radix,
@@ -126,8 +112,8 @@ impl<'input> Parser<'input> {
 
         let mut value = 0;
 
-        while let Some(digit) = to_digit(self.cur()) {
-            value = value * (radix as u64) + digit as u64;
+        while let Some(digit) = ascii_digit_to_value(self.cur(), radix) {
+            value = value * (radix as u64) + digit;
             self.pos += 1;
         }
 

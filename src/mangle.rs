@@ -1,5 +1,6 @@
 use ast::*;
 use charset;
+use int_radix::radix;
 use std::fmt::Write;
 
 impl IdentTag {
@@ -25,7 +26,7 @@ impl NumericDisambiguator {
                 out.push_str("s_");
             }
             index => {
-                write!(out, "s{:x}_", index - 2).unwrap();
+                write!(out, "s{}_", radix(NUMERIC_DISAMBIGUATOR_RADIX, index - 2)).unwrap();
             }
         }
     }
@@ -44,7 +45,7 @@ impl Subst {
         if self.0 == 0 {
             out.push_str("S_");
         } else {
-            write!(out, "S{:x}_", self.0 - 1).unwrap();
+            write!(out, "S{}_", radix(SUBST_RADIX, self.0 - 1)).unwrap();
         }
     }
 }
