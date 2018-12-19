@@ -63,12 +63,10 @@ impl PathPrefix {
             } => {
                 out.push('X');
                 self_type.mangle(out);
-                impled_trait.mangle(out);
+                if let &Some(ref impled_trait) = impled_trait {
+                    impled_trait.mangle(out);
+                }
                 dis.mangle(out);
-            }
-            PathPrefix::InherentImpl { ref self_type } => {
-                out.push('M');
-                self_type.mangle(out);
             }
             PathPrefix::Node {
                 ref prefix,

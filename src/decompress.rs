@@ -64,13 +64,6 @@ impl Decompress {
                         name: prefix.clone(),
                         args: GenericArgumentList::new_empty(),
                     })
-                } else if let Some(ty) = self.types.get(subst) {
-                    Arc::new(AbsolutePath::Path {
-                        name: Arc::new(PathPrefix::InherentImpl {
-                            self_type: ty.clone(),
-                        }),
-                        args: GenericArgumentList::new_empty(),
-                    })
                 } else {
                     unreachable!()
                 }
@@ -87,32 +80,13 @@ impl Decompress {
                 dis,
             } => {
                 let decompressed_self_type = self.decompress_type(self_type);
-                let decompressed_impled_trait = self.decompress_abs_path(impled_trait);
+                let decompressed_impled_trait = impled_trait.as_ref().map(|t| self.decompress_abs_path(t));
 
-                if Arc::ptr_eq(self_type, &decompressed_self_type)
-                    && Arc::ptr_eq(impled_trait, &decompressed_impled_trait)
-                {
-                    path_prefix.clone()
-                } else {
-                    Arc::new(PathPrefix::TraitImpl {
-                        self_type: decompressed_self_type,
-                        impled_trait: decompressed_impled_trait,
-                        dis,
-                    })
-                }
-            }
-            PathPrefix::InherentImpl { ref self_type } => {
-                let decompressed_self_type = self.decompress_type(self_type);
-
-                // NOTE: We return here, that is, without allocating a
-                //       substitution.
-                return if Arc::ptr_eq(self_type, &decompressed_self_type) {
-                    path_prefix.clone()
-                } else {
-                    Arc::new(PathPrefix::InherentImpl {
-                        self_type: decompressed_self_type,
-                    })
-                };
+                Arc::new(PathPrefix::TraitImpl {
+                    self_type: decompressed_self_type,
+                    impled_trait: decompressed_impled_trait,
+                    dis,
+                })
             }
             PathPrefix::Node {
                 ref prefix,
@@ -134,14 +108,6 @@ impl Decompress {
                 //       substitution.
                 return if let Some(prefix) = self.path_prefixes.get(subst) {
                     prefix.clone()
-                } else if let Some(ty) = self.types.get(subst) {
-                    Arc::new(PathPrefix::InherentImpl {
-                        self_type: ty.clone(),
-                    })
-                } else if let Some(abs_path) = self.abs_paths.get(subst) {
-                    Arc::new(PathPrefix::InherentImpl {
-                        self_type: Arc::new(Type::Named(abs_path.clone())),
-                    })
                 } else {
                     unreachable!()
                 };

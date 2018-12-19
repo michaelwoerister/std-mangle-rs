@@ -33,11 +33,8 @@ pub enum PathPrefix {
     },
     TraitImpl {
         self_type: Arc<Type>,
-        impled_trait: Arc<AbsolutePath>,
+        impled_trait: Option<Arc<AbsolutePath>>,
         dis: NumericDisambiguator,
-    },
-    InherentImpl {
-        self_type: Arc<Type>,
     },
     Node {
         prefix: Arc<PathPrefix>,

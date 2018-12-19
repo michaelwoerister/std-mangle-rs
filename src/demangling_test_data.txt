@@ -109,8 +109,8 @@ _RN16mycrate_abcd123f3fooV0C4QUUXVE mycrate[abcd123f]::foo'::{closure}[1]::QUUX'
                                     mycrate::foo::{closure}[1]::QUUX
 
 # Static with generic inherent impl in path
-_RNMN7std_xxx3FooIG1TEEE4quuxV3BARVE std[xxx]::Foo<T>::quux'::BAR'
-                                     std::Foo<T>::quux::BAR
+_RNXN7std_xxx3FooIG1TEEE4quuxV3BARVE <std[xxx]::Foo<T>>::quux'::BAR'
+                                     <std::Foo<T>>::quux::BAR
 
 # Static with trait impl in path
 _RNXiN16mycrate_abcd123f9SomeTraitE4quuxV3FOOVE <isize as mycrate[abcd123f]::SomeTrait>::quux'::FOO'
@@ -245,48 +245,48 @@ _RN16mycrate_abcd123f3barVImEE20some_other_crate_xxx mycrate[abcd123f]::bar'<u32
 ## Inherent methods
 
 # Inherent non-generic method
-_RNMN8std_12342fs4FileE5closeVE std[1234]::fs::File::close'
-                                std::fs::File::close
+_RNXN8std_12342fs4FileE5closeVE <std[1234]::fs::File>::close'
+                                <std::fs::File>::close
 
 # Inherent method with generic impl
-_RNMN8std_12343vec3VecIcEE4pushVE std[1234]::vec::Vec<char>::push'
-                                  std::vec::Vec<char>::push
+_RNXN8std_12343vec3VecIcEE4pushVE <std[1234]::vec::Vec<char>>::push'
+                                  <std::vec::Vec<char>>::push
 
 # Generic inherent method
-_RNMN8std_12346string6StringE6retainVIN7xxx_yyy9predicateVEEE std[1234]::string::String::retain'<xxx[yyy]::predicate'>
-                                                              std::string::String::retain<xxx::predicate>
+_RNXN8std_12346string6StringE6retainVIN7xxx_yyy9predicateVEEE <std[1234]::string::String>::retain'<xxx[yyy]::predicate'>
+                                                              <std::string::String>::retain<xxx::predicate>
 
 # Generic inherent method with generic impl
-_RNMN8std_12343vec3VecIsEE6retainVIN7xxx_yyy9predicateVEEE std[1234]::vec::Vec<i16>::retain'<xxx[yyy]::predicate'>
-                                                           std::vec::Vec<i16>::retain<xxx::predicate>
+_RNXN8std_12343vec3VecIsEE6retainVIN7xxx_yyy9predicateVEEE <std[1234]::vec::Vec<i16>>::retain'<xxx[yyy]::predicate'>
+                                                           <std::vec::Vec<i16>>::retain<xxx::predicate>
 
 # Inherent method with basic self type
-_RNMi5to_leVE isize::to_le'
-              isize::to_le
+_RNXi5to_leVE <isize>::to_le'
+              <isize>::to_le
 
 # Inherent method with tuple self type
-_RNMTcccE3fooVE (char,char,char)::foo'
-                (char,char,char)::foo
+_RNXTcccE3fooVE <(char,char,char)>::foo'
+                <(char,char,char)>::foo
 
 # Inherent method with array self type
-_RNMAs4quuxVE [i16]::quux'
-              [i16]::quux
+_RNXAs4quuxVE <[i16]>::quux'
+              <[i16]>::quux
 
 # Inherent method with function self type
-_RNMFUKcE4quuxVE unsafe extern "C" fn()::quux'
-                 unsafe extern "C" fn()::quux
+_RNXFUKcE4quuxVE <unsafe extern "C" fn()>::quux'
+                 <unsafe extern "C" fn()>::quux
 
 # Inherent method with reference self type
-_RNMRa4quuxVE &i8::quux'
-              &i8::quux
+_RNXRa4quuxVE <&i8>::quux'
+              <&i8>::quux
 
 # Inherent method with pointer self type
-_RNMPu4quuxVE *const ()::quux'
-              *const ()::quux
+_RNXPu4quuxVE <*const ()>::quux'
+              <*const ()>::quux
 
 # Inherent method with disambiguated named self type
-_RNMN7std_xxx3Foos_E4quuxVE std[xxx]::Foo[2]::quux'
-                            std::Foo::quux
+_RNXN7std_xxx3Foos_E4quuxVE <std[xxx]::Foo[2]>::quux'
+                            <std::Foo>::quux
 
 
 ## Trait methods
@@ -339,8 +339,8 @@ _RN7std_xxx3fooV0Cs0_0CE std[xxx]::foo'::{closure}[3]::{closure}[1]
                          std::foo::{closure}[3]::{closure}[1]
 
 # Closure in inherent method
-_RNMm3fooV0Cs_E u32::foo'::{closure}[2]
-                u32::foo::{closure}[2]
+_RNXm3fooV0Cs_E <u32>::foo'::{closure}[2]
+                <u32>::foo::{closure}[2]
 
 # Closure in trait method
 _RNXlN7foo_xxx3BarIxEE4quuxV0Cs_IcEE <i32 as foo[xxx]::Bar<i64>>::quux'::{closure}[2]<char>
@@ -362,12 +362,12 @@ _RN7std_xxx3fooVINS0_3BarEEE std[xxx]::foo'<std[xxx]::foo'::Bar>
                              std::foo<std::foo::Bar>
 
 # Compressed basic type crate root
-_RN7std_xxx3fooVINMa3barINS0_3BARVEEEEE std[xxx]::foo'<i8::bar<std[xxx]::foo'::BAR'>>
-                                        std::foo<i8::bar<std::foo::BAR>>
+_RN7std_xxx3fooVINXa3barINS0_3BARVEEEEE std[xxx]::foo'<<i8>::bar<std[xxx]::foo'::BAR'>>
+                                        std::foo<<i8>::bar<std::foo::BAR>>
 
-# Compressed named type crate root
-_RN7std_xxx3fooVINMNS_4QUUXVE3barVINS0_3BARVEEEEE std[xxx]::foo'<std[xxx]::QUUX'::bar'<std[xxx]::foo'::BAR'>>
-                                                  std::foo<std::QUUX::bar<std::foo::BAR>>
+# Compressed named type crate root - TODO: impl for static does not make sense
+_RN7std_xxx3fooVINXNS_4QUUXVE3barVINS0_3BARVEEEEE std[xxx]::foo'<<std[xxx]::QUUX'>::bar'<std[xxx]::foo'::BAR'>>
+                                                  std::foo<<std::QUUX>::bar<std::foo::BAR>>
 
 # Compressed prefix constructed from prefix that contains substitution itself
 _RN7std_xxx3fooVINS_3barVENS1_3bazVEEE std[xxx]::foo'<std[xxx]::bar',std[xxx]::bar'::baz'>

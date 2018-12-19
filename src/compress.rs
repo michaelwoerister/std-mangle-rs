@@ -57,16 +57,9 @@ impl Compress {
                 dis,
             } => Arc::new(PathPrefix::TraitImpl {
                 self_type: self.compress_type(self_type),
-                impled_trait: self.compress_abs_path(impled_trait),
+                impled_trait: impled_trait.as_ref().map(|t| self.compress_abs_path(t)),
                 dis,
             }),
-            PathPrefix::InherentImpl { ref self_type } => {
-                // NOTE: We return here and thus don't allocate a substitution.
-                //       Compressing `self_type` has already introduced one.
-                return Arc::new(PathPrefix::InherentImpl {
-                    self_type: self.compress_type(self_type),
-                });
-            }
             PathPrefix::Node {
                 ref prefix,
                 ref ident,
@@ -173,7 +166,6 @@ impl Compress {
             PathPrefix::CrateId { .. } | PathPrefix::TraitImpl { .. } | PathPrefix::Node { .. } => {
                 self.prefixes.get(path_prefix).cloned()
             }
-            PathPrefix::InherentImpl { ref self_type } => self.lookup_type_subst(self_type),
             PathPrefix::Subst(_) => unreachable!(),
         }
     }

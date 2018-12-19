@@ -217,7 +217,12 @@ impl<'input> Parser<'input> {
                 self.pos += 1;
 
                 let self_type = self.parse_type()?;
-                let impled_trait = self.parse_abs_path()?;
+
+                let impled_trait = if self.cur() == b'N' || self.cur() == b'S' {
+                    Some(self.parse_abs_path()?)
+                } else {
+                    None
+                };
                 let dis = self.parse_opt_numeric_disambiguator()?;
 
                 PathPrefix::TraitImpl {
@@ -225,14 +230,6 @@ impl<'input> Parser<'input> {
                     impled_trait,
                     dis,
                 }
-            }
-
-            b'M' => {
-                self.pos += 1;
-
-                let self_type = self.parse_type()?;
-
-                PathPrefix::InherentImpl { self_type }
             }
 
             c if c.is_ascii_digit() => {

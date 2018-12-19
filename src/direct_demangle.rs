@@ -270,8 +270,12 @@ impl<'input> Demangler<'input> {
 
                 self.out.push(b'<');
                 self.demangle_type()?;
-                self.out.extend_from_slice(b" as ");
-                self.demangle_abs_path()?;
+
+                if self.cur() == b'N' || self.cur() == b'S' {
+                    self.out.extend_from_slice(b" as ");
+                    self.demangle_abs_path()?;
+                }
+
                 self.out.push(b'>');
 
                 let index = self.parse_opt_numeric_disambiguator()?;

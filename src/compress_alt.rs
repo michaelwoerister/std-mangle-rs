@@ -53,19 +53,9 @@ impl CompressAlt {
                 dis,
             } => Arc::new(PathPrefix::TraitImpl {
                 self_type: self.compress_type(self_type),
-                impled_trait: self.compress_abs_path(impled_trait),
+                impled_trait: impled_trait.as_ref().map(|t| self.compress_abs_path(t)),
                 dis,
             }),
-            PathPrefix::InherentImpl { ref self_type } => {
-                // Note: We return here, thereby skipping the substition
-                // allocation below. Compressing the type will already have
-                // allocated an equivalent substitution. If we didn't return
-                // here we would have to check for the basic-type exception
-                // again.
-                return Arc::new(PathPrefix::InherentImpl {
-                    self_type: self.compress_type(self_type),
-                });
-            }
             PathPrefix::Node {
                 ref prefix,
                 ref ident,

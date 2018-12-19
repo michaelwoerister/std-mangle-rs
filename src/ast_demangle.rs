@@ -61,16 +61,15 @@ impl AstDemangle for PathPrefix {
             } => {
                 out.push('<');
                 self_type.demangle_to_string(out, verbose);
-                out.push_str(" as ");
-                impled_trait.demangle_to_string(out, verbose);
+                if let &Some(ref impled_trait) = impled_trait {
+                    out.push_str(" as ");
+                    impled_trait.demangle_to_string(out, verbose);
+                }
                 out.push('>');
 
                 if dis.0 != 0 && verbose {
                     write!(out, "[{}]", dis.0 + 1).unwrap();
                 }
-            }
-            PathPrefix::InherentImpl { ref self_type } => {
-                self_type.demangle_to_string(out, verbose);
             }
             PathPrefix::Node {
                 ref prefix,
