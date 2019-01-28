@@ -60,6 +60,9 @@ impl Compress {
                 impled_trait: impled_trait.as_ref().map(|t| self.compress_abs_path(t)),
                 dis,
             }),
+            PathPrefix::AbsolutePath { ref path } => return Arc::new(PathPrefix::AbsolutePath {
+                path: self.compress_abs_path(path),
+            }),
             PathPrefix::Node {
                 ref prefix,
                 ref ident,
@@ -165,6 +168,9 @@ impl Compress {
         match *path_prefix {
             PathPrefix::CrateId { .. } | PathPrefix::TraitImpl { .. } | PathPrefix::Node { .. } => {
                 self.prefixes.get(path_prefix).cloned()
+            }
+            PathPrefix::AbsolutePath { ref path } => {
+                self.abs_paths.get(path).cloned()
             }
             PathPrefix::Subst(_) => unreachable!(),
         }

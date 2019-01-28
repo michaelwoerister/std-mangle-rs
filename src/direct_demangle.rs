@@ -287,9 +287,8 @@ impl<'input> Demangler<'input> {
                 true
             }
 
-            b'M' => {
-                self.pos += 1;
-                self.demangle_type()?;
+            b'N' => {
+                self.demangle_abs_path()?;
                 // The type already added a subst
                 false
             }

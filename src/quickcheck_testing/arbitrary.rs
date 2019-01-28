@@ -145,6 +145,13 @@ impl Arbitrary for AbsolutePath {
                     dis: Arbitrary::arbitrary(&mut smaller_rng),
                 }
             }
+            (1, true) => {
+                let mut smaller_rng = get_smaller_rng(g);
+
+                PathPrefix::AbsolutePath {
+                    path: Arbitrary::arbitrary(&mut smaller_rng),
+                }
+            }
             _ => PathPrefix::CrateId {
                 name: generate_ident(g, charset, 2).ident,
                 dis: generate_crate_disambiguator(g),

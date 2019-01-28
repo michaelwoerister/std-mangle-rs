@@ -54,6 +54,11 @@ impl AstDemangle for PathPrefix {
                     write!(out, "[{}]", dis).unwrap();
                 }
             }
+            PathPrefix::AbsolutePath {
+                ref path
+            } => {
+                path.demangle_to_string(out, verbose);
+            }
             PathPrefix::TraitImpl {
                 ref self_type,
                 ref impled_trait,

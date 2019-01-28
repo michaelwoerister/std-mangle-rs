@@ -232,6 +232,12 @@ impl<'input> Parser<'input> {
                 }
             }
 
+            b'N' => {
+                PathPrefix::AbsolutePath {
+                    path: self.parse_abs_path()?,
+                }
+            }
+
             c if c.is_ascii_digit() => {
                 let ident = self.parse_len_prefixed_ident()?;
 
@@ -246,7 +252,7 @@ impl<'input> Parser<'input> {
             }
 
             c => {
-                return expected("SX#", c, "parsing", "<name-prefix>");
+                return expected("SXN#", c, "parsing", "<name-prefix>");
             }
         });
 

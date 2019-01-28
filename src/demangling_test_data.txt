@@ -331,8 +331,9 @@ _RN7std_xxx3fooV0Cs0_E std[xxx]::foo'::{closure}[3]
                        std::foo::{closure}[3]
 
 # Closure in generic free-standing function
-_RN7std_xxx3fooV0Cs0_IiEE std[xxx]::foo'::{closure}[3]<isize>
-                          std::foo::{closure}[3]<isize>
+_RNN7std_xxx3fooVIiEE0Cs0_E std[xxx]::foo'<isize>::{closure}[3]
+                            std::foo<isize>::{closure}[3]
+
 
 # Closure in closure
 _RN7std_xxx3fooV0Cs0_0CE std[xxx]::foo'::{closure}[3]::{closure}[1]
@@ -345,6 +346,10 @@ _RNXm3fooV0Cs_E <u32>::foo'::{closure}[2]
 # Closure in trait method
 _RNXlN7foo_xxx3BarIxEE4quuxV0Cs_IcEE <i32 as foo[xxx]::Bar<i64>>::quux'::{closure}[2]<char>
                                      <i32 as foo::Bar<i64>>::quux::{closure}[2]<char>
+
+# Generic closure
+_RNN7std_xxx3fooVIxEE0Cs0_ImEE std[xxx]::foo'<i64>::{closure}[3]<u32>
+                               std::foo<i64>::{closure}[3]<u32>
 
 
 ## Compression
@@ -365,7 +370,8 @@ _RN7std_xxx3fooVINS0_3BarEEE std[xxx]::foo'<std[xxx]::foo'::Bar>
 _RN7std_xxx3fooVINXa3barINS0_3BARVEEEEE std[xxx]::foo'<<i8>::bar<std[xxx]::foo'::BAR'>>
                                         std::foo<<i8>::bar<std::foo::BAR>>
 
-# Compressed named type crate root - TODO: impl for static does not make sense
+// TODO: impl for static does not make sense
+# Compressed named type crate root
 _RN7std_xxx3fooVINXNS_4QUUXVE3barVINS0_3BARVEEEEE std[xxx]::foo'<<std[xxx]::QUUX'>::bar'<std[xxx]::foo'::BAR'>>
                                                   std::foo<<std::QUUX>::bar<std::foo::BAR>>
 

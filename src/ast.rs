@@ -31,6 +31,9 @@ pub enum PathPrefix {
         name: String,
         dis: String,
     },
+    AbsolutePath {
+        path: Arc<AbsolutePath>,
+    },
     TraitImpl {
         self_type: Arc<Type>,
         impled_trait: Option<Arc<AbsolutePath>>,

@@ -56,6 +56,11 @@ impl CompressAlt {
                 impled_trait: impled_trait.as_ref().map(|t| self.compress_abs_path(t)),
                 dis,
             }),
+            PathPrefix::AbsolutePath {
+                ref path,
+            } => return Arc::new(PathPrefix::AbsolutePath {
+                path: self.compress_abs_path(path),
+            }),
             PathPrefix::Node {
                 ref prefix,
                 ref ident,

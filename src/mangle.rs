@@ -56,6 +56,9 @@ impl PathPrefix {
             PathPrefix::CrateId { ref name, ref dis } => {
                 charset::write_len_prefixed_ident(&[name, "_", dis], out).unwrap();
             }
+            PathPrefix::AbsolutePath { ref path } => {
+                path.mangle(out);
+            }
             PathPrefix::TraitImpl {
                 ref self_type,
                 ref impled_trait,
