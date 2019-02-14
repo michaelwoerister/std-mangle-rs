@@ -7,39 +7,418 @@ use std::sync::Arc;
 
 pub const EOT: u8 = 5; // ASCII "end of transmission"
 
+
+pub fn parse(input: &[u8]) -> Result<Symbol, String> {
+    let mut parser = Parser {
+        input,
+        pos: 0,
+    };
+
+    parser.parse_symbol()
+          .map_err(|e| format!("at position {}: {}", parser.pos, e))
+}
+
 pub struct Parser<'input> {
     input: &'input [u8],
     pos: usize,
 }
 
 impl<'input> Parser<'input> {
-    pub fn parse(mangled: &[u8]) -> Result<Symbol, String> {
-        let mut parser = Parser {
-            input: mangled,
-            pos: 0,
+
+    fn parse_symbol(&mut self) -> Result<Symbol, String> {
+
+        if &self.input[0 .. 2] != b"_R" {
+            return Err(format!("Not a Rust symbol"));
+        }
+
+        self.pos += 2;
+
+        let version = if self.cur().is_ascii_digit() {
+            let encoding_version = self.parse_number(10)? + 1;
+            return error::version_mismatch(encoding_version, 0);
+        } else {
+            None
         };
 
-        parser.parse_symbol_prefix()?;
+        let path = self.parse_path()?;
 
-        let path = parser.parse_abs_path().map_err(|s| {
-            format!(
-                "In {:?}: Parsing error at pos {}: {}",
-                str::from_utf8(mangled).unwrap(),
-                parser.pos,
-                s
-            )
-        })?;
-
-        let instantiating_crate = if parser.pos < parser.input.len() {
-            Some(parser.parse_path_prefix()?)
+        let instantiating_crate = if self.cur() != EOT {
+            Some(self.parse_path()?)
         } else {
             None
         };
 
         Ok(Symbol {
-            name: path,
+            version,
+            path,
             instantiating_crate,
         })
+    }
+
+    fn parse_const(&mut self) -> Result<Const, String> {
+        if self.cur() == b'B' {
+            let mut parser = self.parse_backref()?;
+            parser.parse_const()
+        } else {
+            let ty = self.parse_type()?;
+
+            if self.cur() == b'p' {
+                Ok(Const::Placeholder(ty))
+            } else {
+                let value = self.parse_number(16)?;
+                self.eat(b'_', "<const-data>")?;
+                Ok(Const::Value(ty, value))
+            }
+        }
+    }
+
+    fn parse_generic_arg(&mut self) -> Result<GenericArg, String> {
+        Ok(match self.cur() {
+            b'L' => {
+                GenericArg::Lifetime(self.parse_lifetime()?)
+            }
+            b'K' => {
+                GenericArg::Const(self.parse_const()?)
+            }
+            _ => {
+                GenericArg::Type(self.parse_type()?)
+            }
+        })
+    }
+
+    fn parse_lifetime(&mut self) -> Result<Lifetime, String> {
+        self.eat(b'L', "<lifetime>")?;
+        Ok(Lifetime {
+            debruijn_index: self.parse_base62_number()?,
+        })
+    }
+
+    fn parse_binder(&mut self) -> Result<Binder, String> {
+        self.eat(b'G', "<binder>")?;
+
+        Ok(Binder {
+            count: self.parse_base62_number()?,
+        })
+    }
+
+    fn parse_abi(&mut self) -> Result<Abi, String> {
+        if self.cur() == b'C' {
+            self.pos += 1;
+            Ok(Abi::C)
+        } else {
+            Ok(Abi::Named(self.parse_uident()?))
+        }
+    }
+
+    fn parse_fn_sig(&mut self) -> Result<FnSig, String> {
+        let binder = self.parse_binder()?;
+        let is_unsafe = self.try_eat(b'U');
+        let abi = if self.try_eat(b'K') {
+            Some(self.parse_abi()?)
+        } else {
+            None
+        };
+
+        let mut param_types = Vec::new();
+
+        while self.cur() != b'E' {
+            param_types.push(self.parse_type()?);
+        }
+
+        self.eat(b'E', "<fn-sig>")?;
+
+        let return_type = self.parse_type()?;
+
+        Ok(FnSig {
+            binder,
+            is_unsafe,
+            abi,
+            param_types,
+            return_type
+        })
+    }
+
+    fn parse_dyn_bounds(&mut self) -> Result<DynBounds, String> {
+        let binder = self.parse_binder()?;
+        let mut traits = Vec::new();
+        while self.cur() != b'E' {
+            traits.push(self.parse_dyn_trait()?);
+        }
+        self.eat(b'E', "<dyn-trait>")?;
+
+        Ok(DynBounds {
+            binder,
+            traits,
+        })
+    }
+
+    fn parse_dyn_trait(&mut self) -> Result<DynTrait, String> {
+        let path = self.parse_path()?;
+
+        let mut assoc_type_bindings = Vec::new();
+        while self.cur() == b'p' {
+            assoc_type_bindings.push(self.parse_dyn_trait_assoc_binding()?);
+        }
+
+        Ok(DynTrait {
+            path,
+            assoc_type_bindings,
+        })
+    }
+
+    fn parse_dyn_trait_assoc_binding(&mut self) -> Result<DynTraitAssocBinding, String> {
+        self.eat(b'p', "<dyn-trait-assoc-binding>")?;
+        Ok(DynTraitAssocBinding {
+            ident: self.parse_uident()?,
+            ty: self.parse_type()?,
+        })
+    }
+
+    fn parse_type(&mut self) -> Result<Type, String> {
+        let tag = self.cur();
+        self.pos += 1;
+
+        Ok(match tag {
+            b'a' => Type::BasicType(BasicType::I8),
+            b'b' => Type::BasicType(BasicType::Bool),
+            b'c' => Type::BasicType(BasicType::Char),
+            b'd' => Type::BasicType(BasicType::F64),
+            b'e' => Type::BasicType(BasicType::Str),
+            b'f' => Type::BasicType(BasicType::F32),
+            b'h' => Type::BasicType(BasicType::U8),
+            b'i' => Type::BasicType(BasicType::Isize),
+            b'j' => Type::BasicType(BasicType::Usize),
+            b'l' => Type::BasicType(BasicType::I32),
+            b'm' => Type::BasicType(BasicType::U32),
+            b'n' => Type::BasicType(BasicType::I128),
+            b'o' => Type::BasicType(BasicType::U128),
+            b'p' => Type::BasicType(BasicType::Placeholder),
+            b's' => Type::BasicType(BasicType::I16),
+            b't' => Type::BasicType(BasicType::U16),
+            b'u' => Type::BasicType(BasicType::Unit),
+            b'v' => Type::BasicType(BasicType::Ellipsis),
+            b'x' => Type::BasicType(BasicType::I64),
+            b'y' => Type::BasicType(BasicType::U64),
+            b'z' => Type::BasicType(BasicType::Never),
+
+            b'A' => {
+                Type::Array(Arc::new(self.parse_type()?), Arc::new(self.parse_const()?))
+            }
+
+            b'S' => {
+                Type::Slice(Arc::new(self.parse_type()?))
+            }
+
+            b'C' | b'M' | b'X' | b'Y' |b'N' | b'I' => {
+                self.pos -= 1;
+                Type::Named(Arc::new(self.parse_path()?))
+            }
+
+            b'T' => {
+                let mut args = Vec::new();
+                while self.cur() != b'E' {
+                    args.push(self.parse_type()?);
+                }
+
+                self.eat(b'E', "<type>")?;
+
+                Type::Tuple(args)
+            }
+
+            b'R' => {
+                let lifetime = if self.cur() == b'L' {
+                    Some(self.parse_lifetime()?)
+                } else {
+                    None
+                };
+
+                Type::Ref(lifetime, Arc::new(self.parse_type()?))
+            }
+
+            b'Q' => {
+                let lifetime = if self.cur() == b'L' {
+                    Some(self.parse_lifetime()?)
+                } else {
+                    None
+                };
+
+                Type::RefMut(lifetime, Arc::new(self.parse_type()?))
+            }
+
+            b'P' => {
+                Type::RawPtrConst(Arc::new(self.parse_type()?))
+            }
+
+            b'O' => {
+                Type::RawPtrMut(Arc::new(self.parse_type()?))
+            }
+
+            b'F' => {
+                Type::Fn(Arc::new(self.parse_fn_sig()?))
+            }
+
+            b'D' => {
+                Type::DynTrait(Arc::new(self.parse_dyn_bounds()?), self.parse_lifetime()?)
+            }
+
+            b'B' => {
+                let mut parser = self.parse_backref()?;
+                parser.parse_type()?
+            }
+
+            c => {
+                return Err(format!("Expected start of <type>, found {} instead.", c as char));
+            }
+        })
+    }
+
+    fn parse_impl_path(&mut self) -> Result<ImplPath, String> {
+        let dis = if self.cur() == b's' {
+            Some(self.parse_disambiguator()?)
+        } else {
+            None
+        };
+
+        Ok(ImplPath {
+            dis,
+            path: Arc::new(self.parse_path()?),
+        })
+    }
+
+    fn parse_path(&mut self) -> Result<Path, String> {
+        let tag = self.cur();
+        self.pos += 1;
+
+        Ok(match tag {
+            b'C' => {
+                Path::CrateRoot {
+                    id: self.parse_ident()?,
+                }
+            }
+            b'M' => {
+                Path::InherentImpl {
+                    impl_path: self.parse_impl_path()?,
+                    self_type: self.parse_type()?,
+                }
+            }
+            b'X' => {
+                Path::TraitImpl {
+                    impl_path: self.parse_impl_path()?,
+                    self_type: self.parse_type()?,
+                    trait_name: Arc::new(self.parse_path()?),
+                }
+            }
+            b'Y' => {
+                Path::TraitDef {
+                    self_type: self.parse_type()?,
+                    trait_name: Arc::new(self.parse_path()?),
+                }
+            }
+            b'N' => {
+                Path::Nested {
+                    ns: self.parse_namespace()?,
+                    inner: Arc::new(self.parse_path()?),
+                    ident: self.parse_ident()?,
+                }
+            }
+            b'I' => {
+                let inner = self.parse_path()?;
+
+                let mut args = Vec::new();
+                while self.cur() != b'E' {
+                    args.push(self.parse_generic_arg()?);
+                }
+
+                self.eat(b'E', "<path>")?;
+
+                Path::Generic {
+                    inner: Arc::new(inner),
+                    args,
+                }
+            }
+            b'B' => {
+                let mut parser = self.parse_backref()?;
+                parser.parse_path()?
+            }
+            other => {
+                return expected("CMXYNIB", other, "parsing", "<path>");
+            }
+        })
+    }
+
+    fn parse_namespace(&mut self) -> Result<Namespace, String> {
+        let c = self.cur();
+
+        match c {
+            b'A' ... b'Z' | b'a' ... b'z' => {}
+            c => return Err(format!("Invalid namespace character '{}'", c))
+        };
+
+        self.pos += 1;
+
+        Ok(Namespace(c))
+    }
+
+    fn parse_ident(&mut self) -> Result<Ident, String> {
+        let dis = if self.cur() == b's' {
+            self.parse_disambiguator()?
+        } else {
+            Base62Number(0)
+        };
+
+        Ok(Ident {
+            dis,
+            u_ident: self.parse_uident()?
+        })
+    }
+
+    fn parse_disambiguator(&mut self) -> Result<Base62Number, String> {
+        self.eat(b's', "<disambiguator>")?;
+
+        Ok(Base62Number(self.parse_base62_number()?.0 + 1))
+    }
+
+    fn parse_uident(&mut self) -> Result<UIdent, String> {
+        let punycode = self.try_eat(b'u');
+        let DecimalNumber(num_bytes) = self.parse_decimal_number()?;
+        let start = self.pos;
+        let end = start + num_bytes as usize;
+
+        if end > self.input.len() {
+            return Err(format!("identifier extend beyond end of input"));
+        }
+
+        self.pos = end;
+
+        let bytes = &self.input[start.. end];
+
+        let ident = if punycode {
+            charset::decode_punycode_ident(bytes)?
+        } else {
+            String::from_utf8(bytes.to_owned()).map_err(|e| {
+                format!("{:?}", e)
+            })?
+        };
+
+        Ok(UIdent(ident))
+    }
+
+
+    fn parse_decimal_number(&mut self) -> Result<DecimalNumber, String> {
+        Ok(DecimalNumber(self.parse_number(10)?))
+    }
+
+    fn parse_base62_number(&mut self) -> Result<Base62Number, String> {
+
+        let n = if self.cur() == b'_' {
+            0
+        } else {
+            self.parse_number(62)? + 1
+        };
+
+        self.eat(b'_', "<base-62-number>")?;
+
+        Ok(Base62Number(n))
     }
 
     fn cur(&self) -> u8 {
@@ -50,61 +429,30 @@ impl<'input> Parser<'input> {
         }
     }
 
-    fn parse_symbol_prefix(&mut self) -> Result<(), String> {
-        assert_eq!(self.pos, 0);
-
-        if &self.input[0..2] != b"_R" {
-            return Err("Not a Rust symbol".to_owned());
+    #[must_use]
+    fn eat(&mut self, c: u8, noun: &str) -> Result<(), String> {
+        if self.cur() != c {
+            return expected(str::from_utf8(&[c]).unwrap(), self.cur(), "parsing", noun);
         }
 
-        self.pos += 2;
-
-        if self.cur().is_ascii_digit() {
-            let encoding_version = self.parse_number(10)? + 1;
-            return error::version_mismatch(encoding_version, 0);
-        }
+        self.pos += 1;
 
         Ok(())
     }
 
-    fn parse_opt_numeric_disambiguator(&mut self) -> Result<NumericDisambiguator, String> {
-        let index = if self.cur() != b's' {
-            0
-        } else {
+    fn try_eat(&mut self, c: u8) -> bool {
+        if self.cur() == c {
             self.pos += 1;
-
-            if self.cur() == b'_' {
-                self.pos += 1;
-                1
-            } else {
-                let n = self.parse_underscore_terminated_number(NUMERIC_DISAMBIGUATOR_RADIX)?;
-                n + 2
-            }
-        };
-
-        Ok(NumericDisambiguator(index))
-    }
-
-    fn parse_underscore_terminated_number(&mut self, radix: u8) -> Result<u64, String> {
-        let value = self.parse_number(radix)?;
-
-        if self.cur() != b'_' {
-            return expected(
-                "_",
-                self.cur(),
-                "parsing",
-                "<underscored-terminated number>",
-            );
+            true
+        } else {
+            false
         }
-
-        self.pos += 1;
-        Ok(value)
     }
 
     fn parse_number(&mut self, radix: u8) -> Result<u64, String> {
         if ascii_digit_to_value(self.cur(), radix).is_none() {
             return Err(format!(
-                "Expected base-{} digit; found '{}' instead;",
+                "expected base-{} digit, found {:?}",
                 radix,
                 self.cur() as char
             ));
@@ -120,313 +468,12 @@ impl<'input> Parser<'input> {
         Ok(value)
     }
 
-    fn parse_len_prefixed_ident(&mut self) -> Result<Ident, String> {
-        let len = self.parse_number(10)? as usize;
-        let ident_bytes = &self.input[self.pos..self.pos + len];
+    fn parse_backref(&mut self) -> Result<Parser<'input>, String> {
+        let Base62Number(pos) = self.parse_base62_number()?;
 
-        if ident_bytes.iter().any(|b| !b.is_ascii()) {
-            return Err(format!(
-                "Ident '{}' unexpectedly contains non-ascii characters.",
-                String::from_utf8_lossy(ident_bytes)
-            ));
-        }
-
-        self.pos += len;
-
-        let ident = if self.cur() == b'u' {
-            self.pos += 1;
-            match charset::decode_punycode_ident(ident_bytes) {
-                Ok(ident) => ident,
-                Err(err) => return Err(err),
-            }
-        } else {
-            String::from_utf8(ident_bytes.to_owned()).unwrap()
-        };
-
-        let tag = match self.cur() {
-            b'V' => {
-                self.pos += 1;
-                IdentTag::ValueNs
-            }
-            b'C' => {
-                self.pos += 1;
-                IdentTag::Closure
-            }
-            _ => IdentTag::TypeNs,
-        };
-
-        let dis = self.parse_opt_numeric_disambiguator()?;
-
-        Ok(Ident { ident, tag, dis })
-    }
-
-    fn parse_abs_path(&mut self) -> Result<Arc<AbsolutePath>, String> {
-        match self.cur() {
-            b'N' => {
-                self.pos += 1;
-
-                let name = self.parse_path_prefix()?;
-
-                let args = if self.cur() == b'I' {
-                    self.parse_generic_argument_list()?
-                } else {
-                    GenericArgumentList::new_empty()
-                };
-
-                if self.cur() != b'E' {
-                    return expected("E", self.cur(), "parsing", "<absolute-path>");
-                }
-
-                self.pos += 1;
-
-                Ok(Arc::new(AbsolutePath::Path { name, args }))
-            }
-            b'S' => {
-                let subst = self.parse_subst()?;
-                Ok(Arc::new(AbsolutePath::Subst(subst)))
-            }
-            c => {
-                return expected("NS", c, "parsing", "<absolute-path>");
-            }
-        }
-    }
-
-    fn parse_subst(&mut self) -> Result<Subst, String> {
-        if self.cur() != b'S' {
-            return expected("S", self.cur(), "parsing", "<substitution>");
-        }
-
-        self.pos += 1;
-
-        let index = if self.cur() == b'_' {
-            self.pos += 1;
-            0
-        } else {
-            let n = self.parse_underscore_terminated_number(SUBST_RADIX)?;
-            n + 1
-        };
-
-        Ok(Subst(index))
-    }
-
-    fn parse_path_prefix(&mut self) -> Result<Arc<PathPrefix>, String> {
-        let root = Arc::new(match self.cur() {
-            b'S' => PathPrefix::Subst(self.parse_subst()?),
-
-            b'X' => {
-                self.pos += 1;
-
-                let self_type = self.parse_type()?;
-
-                let impled_trait = if self.cur() == b'N' || self.cur() == b'S' {
-                    Some(self.parse_abs_path()?)
-                } else {
-                    None
-                };
-                let dis = self.parse_opt_numeric_disambiguator()?;
-
-                PathPrefix::TraitImpl {
-                    self_type,
-                    impled_trait,
-                    dis,
-                }
-            }
-
-            b'N' => {
-                PathPrefix::AbsolutePath {
-                    path: self.parse_abs_path()?,
-                }
-            }
-
-            c if c.is_ascii_digit() => {
-                let ident = self.parse_len_prefixed_ident()?;
-
-                if let Some(sep) = ident.ident.rfind('_') {
-                    PathPrefix::CrateId {
-                        name: ident.ident[..sep].to_owned(),
-                        dis: ident.ident[sep + 1..].to_owned(),
-                    }
-                } else {
-                    return Err(format!("Crate ID does not contain disambiguator"));
-                }
-            }
-
-            c => {
-                return expected("SXN#", c, "parsing", "<name-prefix>");
-            }
-        });
-
-        let mut path = root;
-
-        while self.cur() != EOT && self.cur() != b'E' && self.cur() != b'I' {
-            let ident = self.parse_len_prefixed_ident()?;
-
-            path = Arc::new(PathPrefix::Node {
-                prefix: path,
-                ident,
-            });
-        }
-
-        Ok(path)
-    }
-
-    fn parse_generic_argument_list(&mut self) -> Result<GenericArgumentList, String> {
-        assert_eq!(self.cur(), b'I');
-
-        self.pos += 1;
-
-        let mut args = vec![];
-
-        while self.cur() != b'E' {
-            args.push(self.parse_type()?);
-        }
-
-        self.pos += 1;
-
-        Ok(GenericArgumentList(args))
-    }
-
-    fn parse_type(&mut self) -> Result<Arc<Type>, String> {
-        let tag = self.cur();
-        self.pos += 1;
-        let t = match tag {
-            b'a' => Type::BasicType(BasicType::I8),
-            b'b' => Type::BasicType(BasicType::Bool),
-            b'c' => Type::BasicType(BasicType::Char),
-            b'd' => Type::BasicType(BasicType::F64),
-            b'e' => Type::BasicType(BasicType::Str),
-            b'f' => Type::BasicType(BasicType::F32),
-            b'h' => Type::BasicType(BasicType::U8),
-            b'i' => Type::BasicType(BasicType::Isize),
-            b'j' => Type::BasicType(BasicType::Usize),
-            b'l' => Type::BasicType(BasicType::I32),
-            b'm' => Type::BasicType(BasicType::U32),
-            b'n' => Type::BasicType(BasicType::I128),
-            b'o' => Type::BasicType(BasicType::U128),
-            b's' => Type::BasicType(BasicType::I16),
-            b't' => Type::BasicType(BasicType::U16),
-            b'u' => Type::BasicType(BasicType::Unit),
-            b'v' => Type::BasicType(BasicType::Ellipsis),
-            b'x' => Type::BasicType(BasicType::I64),
-            b'y' => Type::BasicType(BasicType::U64),
-            b'z' => Type::BasicType(BasicType::Never),
-
-            b'A' => {
-                let len = if self.cur().is_ascii_digit() {
-                    Some(self.parse_number(10)?)
-                } else {
-                    None
-                };
-
-                let inner = self.parse_type()?;
-
-                Type::Array(len, inner)
-            }
-
-            b'F' => {
-                let is_unsafe = if self.cur() == b'U' {
-                    self.pos += 1;
-                    true
-                } else {
-                    false
-                };
-
-                let abi = if self.cur() == b'K' {
-                    self.parse_abi()?
-                } else {
-                    Abi::Rust
-                };
-
-                let mut params = vec![];
-                while self.cur() != b'E' && self.cur() != b'J' {
-                    params.push(self.parse_type()?);
-                }
-
-                let return_type = if self.cur() == b'J' {
-                    self.pos += 1;
-                    Some(self.parse_type()?)
-                } else {
-                    None
-                };
-
-                if self.cur() != b'E' {
-                    return expected("E", self.cur(), "parsing", "<fn-type>");
-                }
-
-                // Skip the 'E'
-                self.pos += 1;
-
-                Type::Fn {
-                    is_unsafe,
-                    abi,
-                    return_type,
-                    params,
-                }
-            }
-
-            b'G' => {
-                let ident = self.parse_len_prefixed_ident()?;
-                if self.cur() != b'E' {
-                    return expected("E", self.cur(), "parsing", "<generic-param-name>");
-                }
-                self.pos += 1;
-                Type::GenericParam(ident)
-            }
-
-            b'N' => {
-                // We have to back up here
-                self.pos -= 1;
-                Type::Named(self.parse_abs_path()?)
-            }
-
-            b'O' => Type::RawPtrMut(self.parse_type()?),
-            b'P' => Type::RawPtrConst(self.parse_type()?),
-            b'Q' => Type::RefMut(self.parse_type()?),
-            b'R' => Type::Ref(self.parse_type()?),
-            b'S' => {
-                self.pos -= 1;
-                Type::Subst(self.parse_subst()?)
-            }
-            b'T' => {
-                let mut params = vec![];
-
-                while self.cur() != b'E' {
-                    params.push(self.parse_type()?);
-                }
-
-                self.pos += 1;
-
-                Type::Tuple(params)
-            }
-
-            other => {
-                return Err(format!(
-                    "expected start of type; found '{}' instead; \
-                     while parsing <type>",
-                    other as char
-                ));
-            }
-        };
-
-        Ok(Arc::new(t))
-    }
-
-    fn parse_abi(&mut self) -> Result<Abi, String> {
-        if self.cur() != b'K' {
-            return expected("K", self.cur(), "parsing", "<abi>");
-        }
-
-        self.pos += 1;
-
-        let abi = match self.cur() {
-            b'c' => Abi::C,
-            c => {
-                return expected("c", c, "parsing", "<abi>");
-            }
-        };
-
-        self.pos += 1;
-
-        Ok(abi)
+        Ok(Parser {
+            input: self.input,
+            pos: pos as usize,
+        })
     }
 }

@@ -2,224 +2,280 @@ use ast::*;
 use std::fmt::Write;
 
 pub trait AstDemangle {
-    fn demangle_to_string(&self, out: &mut String, verbose: bool);
+    fn demangle_to_string(&self, out: &mut String);
 
-    fn demangle(&self, verbose: bool) -> String {
+    fn demangle(&self) -> String {
         let mut out = String::new();
-        self.demangle_to_string(&mut out, verbose);
+        self.demangle_to_string(&mut out);
         out
     }
 }
 
+
+impl AstDemangle for Symbol {
+    fn demangle_to_string(&self, out: &mut String) {
+        self.path.demangle_to_string(out);
+
+        if let Some(ref instantiating_crate) = self.instantiating_crate {
+            out.push_str(" @ ");
+            instantiating_crate.demangle_to_string(out);
+        }
+    }
+}
+
 impl AstDemangle for Ident {
-    fn demangle_to_string(&self, out: &mut String, verbose: bool) {
-        let emit_disambiguator = match self.tag {
-            IdentTag::TypeNs => {
-                out.push_str(&self.ident);
-                self.dis.0 != 0 && verbose
-            }
-            IdentTag::ValueNs => {
-                out.push_str(&self.ident);
+    fn demangle_to_string(&self, out: &mut String) {
 
-                if verbose {
-                    out.push_str("'");
-                }
-                self.dis.0 != 0 && verbose
-            }
-            IdentTag::Closure => {
-                out.push_str("{closure}");
-                true
-            }
-        };
-
-        if emit_disambiguator {
-            write!(out, "[{}]", self.dis.0 + 1).unwrap();
+        self.u_ident.demangle_to_string(out);
+        if self.dis != Base62Number(0) {
+            write!(out, "[{}]", self.dis.0).unwrap();
         }
     }
 }
 
-// This should not be needed generally
-impl AstDemangle for Subst {
-    fn demangle_to_string(&self, out: &mut String, _verbose: bool) {
-        write!(out, "{{{}}}", self.0).unwrap();
+impl AstDemangle for UIdent {
+    fn demangle_to_string(&self, out: &mut String) {
+        out.push_str(&self.0[..]);
     }
 }
 
-impl AstDemangle for PathPrefix {
-    fn demangle_to_string(&self, out: &mut String, verbose: bool) {
+impl AstDemangle for Path {
+    fn demangle_to_string(&self, out: &mut String) {
         match *self {
-            PathPrefix::CrateId { ref name, ref dis } => {
-                out.push_str(name);
-                if verbose {
-                    write!(out, "[{}]", dis).unwrap();
-                }
+            Path::CrateRoot { ref id } => {
+                id.demangle_to_string(out);
             }
-            PathPrefix::AbsolutePath {
-                ref path
-            } => {
-                path.demangle_to_string(out, verbose);
-            }
-            PathPrefix::TraitImpl {
-                ref self_type,
-                ref impled_trait,
-                dis,
-            } => {
+            Path::InherentImpl { impl_path: _, ref self_type } => {
                 out.push('<');
-                self_type.demangle_to_string(out, verbose);
-                if let &Some(ref impled_trait) = impled_trait {
-                    out.push_str(" as ");
-                    impled_trait.demangle_to_string(out, verbose);
-                }
+                self_type.demangle_to_string(out);
                 out.push('>');
+            }
+            Path::TraitImpl { impl_path: _, ref self_type, ref trait_name } |
+            Path::TraitDef { ref self_type, ref trait_name } => {
+                out.push('<');
+                self_type.demangle_to_string(out);
+                out.push_str(" as ");
+                trait_name.demangle_to_string(out);
+                out.push('>');
+            }
+            Path::Nested { ref ns, ref inner, ref ident } => {
+                inner.demangle_to_string(out);
 
-                if dis.0 != 0 && verbose {
-                    write!(out, "[{}]", dis.0 + 1).unwrap();
+                if *ns == Namespace(b'C') {
+                    write!(out, "::{{closure}}[{}]", ident.dis.0).unwrap();
+                } else if ident.u_ident.0.len() > 0 {
+                    out.push_str("::");
+                    ident.demangle_to_string(out);
                 }
             }
-            PathPrefix::Node {
-                ref prefix,
-                ref ident,
-            } => {
-                prefix.demangle_to_string(out, verbose);
-                out.push_str("::");
-                ident.demangle_to_string(out, verbose);
-            }
-            PathPrefix::Subst(subst) => {
-                subst.demangle_to_string(out, verbose);
+            Path::Generic { ref inner, ref args } => {
+                inner.demangle_to_string(out);
+                out.push('<');
+                for arg in args {
+                    arg.demangle_to_string(out);
+                    out.push(',');
+                }
+                out.pop();
+                out.push('>');
             }
         }
+
     }
 }
 
-impl AstDemangle for AbsolutePath {
-    fn demangle_to_string(&self, out: &mut String, verbose: bool) {
+impl AstDemangle for DynBounds {
+    fn demangle_to_string(&self, out: &mut String) {
+        for tr in self.traits.iter() {
+            tr.demangle_to_string(out);
+            out.push_str("+");
+        }
+
+        out.pop();
+    }
+}
+
+impl AstDemangle for GenericArg {
+    fn demangle_to_string(&self, out: &mut String) {
         match *self {
-            AbsolutePath::Path { ref name, ref args } => {
-                name.demangle_to_string(out, verbose);
-                args.demangle_to_string(out, verbose);
+            GenericArg::Lifetime(ref lt) => {
+                lt.demangle_to_string(out);
             }
-            AbsolutePath::Subst(subst) => {
-                subst.demangle_to_string(out, verbose);
+            GenericArg::Type(ref ty) => {
+                ty.demangle_to_string(out);
+            }
+            GenericArg::Const(ref k) => {
+                k.demangle_to_string(out);
             }
         }
     }
 }
 
-impl AstDemangle for GenericArgumentList {
-    fn demangle_to_string(&self, out: &mut String, verbose: bool) {
-        if self.len() > 0 {
-            out.push('<');
-            for param in self.iter() {
-                param.demangle_to_string(out, verbose);
-                out.push(',');
-            }
-            out.pop();
-            out.push('>');
-        }
+impl AstDemangle for Lifetime {
+    fn demangle_to_string(&self, out: &mut String) {
+        out.push_str("'_");
     }
 }
 
 impl AstDemangle for Type {
-    fn demangle_to_string(&self, out: &mut String, verbose: bool) {
+    fn demangle_to_string(&self, out: &mut String) {
         match *self {
-            Type::BasicType(t) => {
-                t.demangle_to_string(out, verbose);
+            Type::BasicType(bt) => {
+                bt.demangle_to_string(out);
             }
-            Type::Ref(ref t) => {
-                out.push('&');
-                t.demangle_to_string(out, verbose);
+            Type::Array(ref inner, ref len) => {
+                out.push_str("[");
+                inner.demangle_to_string(out);
+                out.push_str("; ");
+                len.demangle_to_string(out);
+                out.push_str("]");
             }
-            Type::RefMut(ref t) => {
-                out.push_str("&mut ");
-                t.demangle_to_string(out, verbose);
+            Type::Slice(ref inner) => {
+                out.push_str("[");
+                inner.demangle_to_string(out);
+                out.push_str("]");
             }
-            Type::RawPtrConst(ref t) => {
-                out.push_str("*const ");
-                t.demangle_to_string(out, verbose);
+            Type::Named(ref path) => {
+                path.demangle_to_string(out);
             }
-            Type::RawPtrMut(ref t) => {
-                out.push_str("*mut ");
-                t.demangle_to_string(out, verbose);
-            }
-            Type::Array(opt_size, ref t) => {
-                out.push('[');
-                t.demangle_to_string(out, verbose);
-
-                if let Some(size) = opt_size {
-                    write!(out, "; {}", size).unwrap();
-                }
-
-                out.push(']');
-            }
-            Type::Tuple(ref components) => {
-                out.push('(');
-                for c in components {
-                    c.demangle_to_string(out, verbose);
-                    out.push(',');
+            Type::Tuple(ref inner) => {
+                out.push_str("(");
+                for ty in inner {
+                    ty.demangle_to_string(out);
+                    out.push_str(",");
                 }
                 out.pop();
-                out.push(')');
+                out.push_str(")");
             }
-            Type::Named(ref abs_path) => {
-                abs_path.demangle_to_string(out, verbose);
+            Type::Ref(_, ref ty) => {
+                out.push_str("&");
+                ty.demangle_to_string(out);
             }
-            Type::GenericParam(ref ident) => {
-                ident.demangle_to_string(out, verbose);
+            Type::RefMut(_, ref ty) => {
+                out.push_str("&mut ");
+                ty.demangle_to_string(out);
             }
-            Type::Fn {
-                ref return_type,
-                ref params,
-                is_unsafe,
-                abi,
-            } => {
-                if is_unsafe {
-                    out.push_str("unsafe ");
-                }
-
-                if abi != Abi::Rust {
-                    out.push_str("extern ");
-                    abi.demangle_to_string(out, verbose);
-                    out.push(' ');
-                }
-
-                out.push_str("fn(");
-
-                if params.len() > 0 {
-                    for param in params {
-                        param.demangle_to_string(out, verbose);
-                        out.push(',');
-                    }
-
-                    out.pop();
-                }
-
-                out.push(')');
-
-                if let &Some(ref return_type) = return_type {
-                    out.push_str(" -> ");
-                    return_type.demangle_to_string(out, verbose);
-                }
+            Type::RawPtrConst(ref ty)  => {
+                out.push_str("*const ");
+                ty.demangle_to_string(out);
             }
-            Type::Subst(subst) => {
-                subst.demangle_to_string(out, verbose);
+            Type::RawPtrMut(ref ty) => {
+                out.push_str("*mut ");
+                ty.demangle_to_string(out);
             }
+            Type::Fn(ref fn_sig) => {
+                fn_sig.demangle_to_string(out);
+            }
+            Type::DynTrait(ref bounds, _) => {
+                bounds.demangle_to_string(out);
+            }
+
+        }
+    }
+}
+
+impl AstDemangle for FnSig {
+    fn demangle_to_string(&self, out: &mut String) {
+        if self.is_unsafe {
+            out.push_str("unsafe ");
+        }
+
+        if let Some(ref abi) = self.abi {
+            out.push_str("extern ");
+            abi.demangle_to_string(out);
+            out.push_str(" ");
+        }
+
+        out.push_str("fn(");
+
+        if self.param_types.len() > 0 {
+            for param_type in self.param_types.iter() {
+                param_type.demangle_to_string(out);
+                out.push_str(",");
+            }
+            out.pop();
+        }
+
+        out.push_str(")");
+
+        if self.return_type != Type::BasicType(BasicType::Unit) {
+            out.push_str(" -> ");
+            self.return_type.demangle_to_string(out);
         }
     }
 }
 
 impl AstDemangle for Abi {
-    fn demangle_to_string(&self, out: &mut String, _verbose: bool) {
+    fn demangle_to_string(&self, out: &mut String) {
         out.push('"');
         match *self {
-            Abi::Rust => {}
-            Abi::C => out.push_str("C"),
-        };
+            Abi::C => {
+                out.push('C');
+            }
+            Abi::Named(ref ident) => {
+                ident.demangle_to_string(out);
+            }
+        }
         out.push('"');
     }
 }
 
+
+impl AstDemangle for DynTrait {
+    fn demangle_to_string(&self, out: &mut String) {
+        self.path.demangle_to_string(out);
+
+        if self.assoc_type_bindings.len() > 0 {
+            out.push('<');
+
+            for binding in self.assoc_type_bindings.iter() {
+                binding.demangle_to_string(out);
+                out.push_str(", ");
+            }
+
+            out.pop();
+            out.push('>');
+        }
+
+    }
+}
+
+impl AstDemangle for DynTraitAssocBinding {
+    fn demangle_to_string(&self, out: &mut String) {
+        self.ident.demangle_to_string(out);
+        out.push('=');
+        self.ty.demangle_to_string(out);
+    }
+}
+
+impl AstDemangle for Const {
+    fn demangle_to_string(&self, out: &mut String) {
+        match *self {
+            Const::Value(Type::BasicType(BasicType::I8), i) |
+            Const::Value(Type::BasicType(BasicType::I16), i) |
+            Const::Value(Type::BasicType(BasicType::I32), i) |
+            Const::Value(Type::BasicType(BasicType::I64), i) |
+            Const::Value(Type::BasicType(BasicType::I128), i) |
+            Const::Value(Type::BasicType(BasicType::Isize), i) |
+            Const::Value(Type::BasicType(BasicType::U8), i) |
+            Const::Value(Type::BasicType(BasicType::U16), i) |
+            Const::Value(Type::BasicType(BasicType::U32), i) |
+            Const::Value(Type::BasicType(BasicType::U64), i) |
+            Const::Value(Type::BasicType(BasicType::U128), i) |
+            Const::Value(Type::BasicType(BasicType::Usize), i) => {
+                write!(out, "{}", i).unwrap();
+            }
+            Const::Placeholder(ref ty) |
+            Const::Value(ref ty, _) => {
+                out.push_str("{const ");
+                ty.demangle_to_string(out);
+                out.push('}');
+            }
+        }
+    }
+}
+
 impl AstDemangle for BasicType {
-    fn demangle_to_string(&self, out: &mut String, _verbose: bool) {
+    fn demangle_to_string(&self, out: &mut String) {
         out.push_str(match *self {
             BasicType::Bool => "bool",
             BasicType::Char => "char",
@@ -241,19 +297,7 @@ impl AstDemangle for BasicType {
             BasicType::F64 => "f64",
             BasicType::Never => "!",
             BasicType::Ellipsis => "...",
+            BasicType::Placeholder => "_",
         });
-    }
-}
-
-impl AstDemangle for Symbol {
-    fn demangle_to_string(&self, out: &mut String, verbose: bool) {
-        self.name.demangle_to_string(out, verbose);
-
-        if verbose {
-            if let Some(ref instantiating_crate) = self.instantiating_crate {
-                out.push_str(" @ ");
-                instantiating_crate.demangle_to_string(out, verbose);
-            }
-        }
     }
 }

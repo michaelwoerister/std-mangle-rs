@@ -19,8 +19,8 @@ fn main() {
             let title_line = &lines[i - 1];
             let spec_line = &lines[i];
 
-            emit_test_case_ast(spec_line, title_line, &mut output, true);
-            emit_test_case_direct(spec_line, title_line, &mut output, true);
+            emit_test_case_ast(spec_line, title_line, &mut output);
+            // emit_test_case_direct(spec_line, title_line, &mut output, true);
 
             // build non-verbose pseudoline
             assert!(
@@ -29,41 +29,37 @@ fn main() {
                 i - 1
             );
 
-            let non_verbose_spec_line = &format!(
-                "{} {}",
-                extract_mangled_name_from_spec_line(spec_line),
-                lines[i + 1].trim()
-            );
+            // let non_verbose_spec_line = &format!(
+            //     "{} {}",
+            //     extract_mangled_name_from_spec_line(spec_line),
+            //     lines[i + 1].trim()
+            // );
 
-            emit_test_case_ast(non_verbose_spec_line, title_line, &mut output, false);
-            emit_test_case_direct(non_verbose_spec_line, title_line, &mut output, false);
+            // emit_test_case_ast(non_verbose_spec_line, title_line, &mut output, false);
+            // emit_test_case_direct(non_verbose_spec_line, title_line, &mut output, false);
         }
     }
 }
 
-fn extract_mangled_name_from_spec_line(spec_line: &str) -> &str {
-    assert!(spec_line.starts_with("_R"));
-    let end_of_mangled_name = spec_line.find(' ').unwrap();
-    &spec_line[..end_of_mangled_name]
-}
+// fn extract_mangled_name_from_spec_line(spec_line: &str) -> &str {
+//     assert!(spec_line.starts_with("_R"));
+//     let end_of_mangled_name = spec_line.find(' ').unwrap();
+//     &spec_line[..end_of_mangled_name]
+// }
 
-fn emit_test_case_ast(spec_line: &str, title_line: &str, output: &mut impl Write, verbose: bool) {
+fn emit_test_case_ast(spec_line: &str, title_line: &str, output: &mut impl Write) {
     if spec_line.starts_with("_R") && title_line.starts_with("#") {
         let end_of_mangled_name = spec_line.find(' ').unwrap();
         let mangled = &spec_line[..end_of_mangled_name];
         let demangled = spec_line[end_of_mangled_name + 1..].trim();
 
-        let mut title = title_line[1..]
+        let title = title_line[1..]
             .trim()
             .replace(" ", "_")
             .replace("/", "_")
             .replace(",", "_")
             .replace("-", "_")
             + "_ast";
-
-        if verbose {
-            title += "_verbose";
-        }
 
         writeln!(output, "#[test] #[allow(non_snake_case)] fn {}() {{", title).unwrap();
         writeln!(output, "  let demangled_expected = r#\"{}\"#;", demangled).unwrap();
@@ -72,11 +68,9 @@ fn emit_test_case_ast(spec_line: &str, title_line: &str, output: &mut impl Write
             "  let ast = ::mangled_symbol_to_ast(r#\"{}\"#).unwrap();",
             mangled
         ).unwrap();
-        writeln!(output, "  let decompressed = ::decompress_ast(&ast);").unwrap();
         writeln!(
             output,
-            "  let demangled_actual = ::ast_to_demangled_symbol(&decompressed, {});",
-            verbose
+            "  let demangled_actual = ::ast_to_demangled_symbol(&ast);"
         ).unwrap();
         writeln!(
             output,
@@ -86,44 +80,44 @@ fn emit_test_case_ast(spec_line: &str, title_line: &str, output: &mut impl Write
     }
 }
 
-fn emit_test_case_direct(
-    spec_line: &str,
-    title_line: &str,
-    output: &mut impl Write,
-    verbose: bool,
-) {
-    if spec_line.starts_with("_R") && title_line.starts_with("#") {
-        let end_of_mangled_name = spec_line.find(' ').unwrap();
-        let mangled = &spec_line[..end_of_mangled_name];
-        let demangled = spec_line[end_of_mangled_name + 1..].trim();
+// fn emit_test_case_direct(
+//     spec_line: &str,
+//     title_line: &str,
+//     output: &mut impl Write,
+//     verbose: bool,
+// ) {
+//     if spec_line.starts_with("_R") && title_line.starts_with("#") {
+//         let end_of_mangled_name = spec_line.find(' ').unwrap();
+//         let mangled = &spec_line[..end_of_mangled_name];
+//         let demangled = spec_line[end_of_mangled_name + 1..].trim();
 
-        let mut title = title_line[1..]
-            .trim()
-            .replace(" ", "_")
-            .replace("/", "_")
-            .replace(",", "_")
-            .replace("-", "_")
-            + "_direct";
+//         let mut title = title_line[1..]
+//             .trim()
+//             .replace(" ", "_")
+//             .replace("/", "_")
+//             .replace(",", "_")
+//             .replace("-", "_")
+//             + "_direct";
 
-        if verbose {
-            title += "_verbose";
-        }
+//         if verbose {
+//             title += "_verbose";
+//         }
 
-        writeln!(output, "#[test] #[allow(non_snake_case)] fn {}() {{", title).unwrap();
-        writeln!(output, "  let demangled_expected = r#\"{}\"#;", demangled).unwrap();
-        writeln!(
-            output,
-            "  let demangled_expected = Ok(demangled_expected.to_string());"
-        ).unwrap();
-        writeln!(
-            output,
-            "  let demangled_actual = ::demangle_symbol(\"{}\", {});",
-            mangled, verbose
-        ).unwrap();
-        writeln!(
-            output,
-            "  assert_eq!(demangled_expected, demangled_actual);"
-        ).unwrap();
-        writeln!(output, "}}").unwrap();
-    }
-}
+//         writeln!(output, "#[test] #[allow(non_snake_case)] fn {}() {{", title).unwrap();
+//         writeln!(output, "  let demangled_expected = r#\"{}\"#;", demangled).unwrap();
+//         writeln!(
+//             output,
+//             "  let demangled_expected = Ok(demangled_expected.to_string());"
+//         ).unwrap();
+//         writeln!(
+//             output,
+//             "  let demangled_actual = ::demangle_symbol(\"{}\", {});",
+//             mangled, verbose
+//         ).unwrap();
+//         writeln!(
+//             output,
+//             "  assert_eq!(demangled_expected, demangled_actual);"
+//         ).unwrap();
+//         writeln!(output, "}}").unwrap();
+//     }
+// }
