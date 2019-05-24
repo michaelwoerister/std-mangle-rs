@@ -11,7 +11,6 @@ pub trait AstDemangle {
     }
 }
 
-
 impl AstDemangle for Symbol {
     fn demangle_to_string(&self, out: &mut String) {
         self.path.demangle_to_string(out);

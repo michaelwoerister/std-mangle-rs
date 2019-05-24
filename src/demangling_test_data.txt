@@ -13,84 +13,59 @@
 
 # Demangle i8
 _RINxC3std3FooaE std::Foo<i8>
-                 std::Foo<i8>
-
 # Demangle i16
 _RINxC3std3FoosE std::Foo<i16>
-                 std::Foo<i16>
 # Demangle i32
 _RINxC3std3FoolE std::Foo<i32>
-                 std::Foo<i32>
 # Demangle i64
 _RINxC3std3FooxE std::Foo<i64>
-                 std::Foo<i64>
 # Demangle i128
 _RINxC3std3FoonE std::Foo<i128>
-                 std::Foo<i128>
 # Demangle isize
 _RINxC3std3FooiE std::Foo<isize>
-                 std::Foo<isize>
 # Demangle u8
 _RINxC3std3FoohE std::Foo<u8>
-                 std::Foo<u8>
 # Demangle u16
 _RINxC3std3FootE std::Foo<u16>
-                 std::Foo<u16>
 # Demangle u32
 _RINxC3std3FoomE std::Foo<u32>
-                 std::Foo<u32>
 # Demangle u64
 _RINxC3std3FooyE std::Foo<u64>
-                 std::Foo<u64>
 # Demangle u128
 _RINxC3std3FoooE std::Foo<u128>
-                 std::Foo<u128>
 # Demangle usize
 _RINxC3std3FoojE std::Foo<usize>
-                 std::Foo<usize>
 # Demangle f32
 _RINxC3std3FoofE std::Foo<f32>
-                 std::Foo<f32>
 # Demangle f64
 _RINxC3std3FoodE std::Foo<f64>
-                 std::Foo<f64>
 # Demangle bool
 _RINxC3std3FoobE std::Foo<bool>
-                 std::Foo<bool>
 # Demangle char
 _RINxC3std3FoocE std::Foo<char>
-                 std::Foo<char>
 # Demangle unit
 _RINxC3std3FoouE std::Foo<()>
-                 std::Foo<()>
 # Demangle never
 _RINxC3std3FoozE std::Foo<!>
-                 std::Foo<!>
 # Demangle str
 _RINxC3std3FooeE std::Foo<str>
-                 std::Foo<str>
 # Demangle ellipsis
 _RINxC3std3FoovE std::Foo<...>
-                 std::Foo<...>
 
 
 ## Statics
 
 # Static at crate level
 _RNxC7mycrate3FOO mycrate::FOO
-                  mycrate::FOO
 
 # Static in module
 _RNxNyC7mycrate3bar3FOO mycrate::bar::FOO
-                        mycrate::bar::FOO
 
 # Static in function
 _RNxNxC7mycrate3foo4QUUX mycrate::foo::QUUX
-                         mycrate::foo::QUUX
 
 # Static with mixed module/function/static path
 _RNxNxNxNyC7mycrate3bar3foo3BAZ4QUUX mycrate::bar::foo::BAZ::QUUX
-                                     mycrate::bar::foo::BAZ::QUUX
 
 # Static with unicode name
 ...
@@ -100,23 +75,18 @@ _RNxNxNxNyC7mycrate3bar3foo3BAZ4QUUX mycrate::bar::foo::BAZ::QUUX
 
 # Static with disambiguated name
 _RNxNyC7mycrate3foos0_3BAR mycrate::foo::BAR[2]
-                           mycrate::foo::BAR[2]
 
 # Static with disambiguated module in path
 _RNxNyC7mycrates0_3foo3BAR mycrate::foo[2]::BAR
-                           mycrate::foo::BAR
 
 # Static with closure in path
 _RNxNCNxC7mycrate3foo1_4QUUX mycrate::foo::{closure}[0]::QUUX
-                             mycrate::foo::{closure}[0]::QUUX
 
 # Static with generic inherent impl in path
 _RNxNxMC3stdINyC3std3FoopE4quux3BAR <std::Foo<_>>::quux::BAR
-                                    <std::Foo<_>>::quux::BAR
 
 # Static with trait impl in path
 _RNxNxXC3stdiNyC7mycrate9SomeTrait4quux3FOO <isize as mycrate::SomeTrait>::quux::FOO
-                                            <isize as mycrate::SomeTrait>::quux::FOO
 
 
 
@@ -124,19 +94,15 @@ _RNxNxXC3stdiNyC7mycrate9SomeTrait4quux3FOO <isize as mycrate::SomeTrait>::quux:
 
 # Free-standing function at crate level
 _RNxC7mycrate4quux mycrate::quux
-                   mycrate::quux
 
 # Free-standing function in module
 _RNxNyC7mycrate3foo4quux mycrate::foo::quux
-                         mycrate::foo::quux
 
 # Free-standing function in function
 _RNxNxC7mycrate3foo3bar mycrate::foo::bar
-                        mycrate::foo::bar
 
 # Free-standing function with mixed module/function/Static path
 _RNxNxNxNyC7mycrate3bar3foo3BAR4quux mycrate::bar::foo::BAR::quux
-                                     mycrate::bar::foo::BAR::quux
 
 # Free-standing function with unicode name
 ...
@@ -146,19 +112,15 @@ _RNxNxNxNyC7mycrate3bar3foo3BAR4quux mycrate::bar::foo::BAR::quux
 
 # Free-standing function with disambiguated name
 _RNxNyC7mycrate3foos0_4quux mycrate::foo::quux[2]
-                            mycrate::foo::quux[2]
 
 # Free-standing function with disambiguated module in path
 _RNxNyC7mycrates1_3foo4quux mycrate::foo[3]::quux
-                            mycrate::foo[3]::quux
 
 # Free-standing function with closure in path
 _RNxNCNyC7mycrate3foos_1_3bar mycrate::foo::{closure}[1]::bar
-                              mycrate::foo::{closure}[1]::bar
 
 # Free-standing function with trait impl in path
 _RNxNxXC7mycrateReNyC7mycrate3Foo3foo6helper <&str as mycrate::Foo>::foo::helper
-                                             <&str as mycrate::Foo>::foo::helper
 
 
 
@@ -351,19 +313,15 @@ _RNxNxXC7mycrateReNyC7mycrate3Foo3foo6helper <&str as mycrate::Foo>::foo::helper
 
 # Compressed name prefix as absolute path
 _RNxXC3stdNyNyB4_3foo3FooBb_3bar <std::foo::Foo as std::foo>::bar
-                                 <std::foo::Foo as std::foo>::bar
 
 # Compressed name prefix as type
 _RINxC3std3fooB2_E std::foo<std::foo>
-                   std::foo<std::foo>
 
 # Compressed name prefix as type name prefix
 _RINxC3std3fooNyB2_3BarE std::foo<std::foo::Bar>
-                         std::foo<std::foo::Bar>
 
 # Progressive type compression
 _RINxC3std3fooTNyB4_3BarBe_EBd_E std::foo<(std::Bar,std::Bar),(std::Bar,std::Bar)>
-                                 std::foo<(std::Bar,std::Bar),(std::Bar,std::Bar)>
 
 // # Substituted instantiating crate suffix
 // _RN16mycrate_abcd123f3barVImEES_ mycrate[abcd123f]::bar'<u32> @ mycrate[abcd123f]

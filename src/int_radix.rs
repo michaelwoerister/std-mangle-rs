@@ -87,14 +87,14 @@ mod tests {
         }
     }
 
-    // quickcheck! {
-    //     fn radix_fmt_vs_std(value: u64, base: u8) -> bool {
-    //         if base < 2 || base > 36 {
-    //             return true
-    //         }
+    quickcheck! {
+        fn radix_fmt_vs_std(value: u64, base: u8) -> bool {
+            if base < 2 || base > 36 {
+                return true
+            }
 
-    //         let text = &format!("{}",radix(base, value));
-    //         value == u64::from_str_radix(text, base as u32).unwrap()
-    //     }
-    // }
+            let text = &format!("{}",radix(base, value));
+            value == u64::from_str_radix(text, base as u32).unwrap()
+        }
+    }
 }

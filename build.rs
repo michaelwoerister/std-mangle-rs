@@ -18,36 +18,12 @@ fn main() {
         if lines[i].starts_with("_R") && lines[i - 1].starts_with("#") {
             let title_line = &lines[i - 1];
             let spec_line = &lines[i];
-
-            emit_test_case_ast(spec_line, title_line, &mut output);
-            // emit_test_case_direct(spec_line, title_line, &mut output, true);
-
-            // build non-verbose pseudoline
-            assert!(
-                !lines[i + 1].trim().is_empty() && !lines[i + 1].starts_with("#"),
-                "non-verbose test case missing for test at line {}",
-                i - 1
-            );
-
-            // let non_verbose_spec_line = &format!(
-            //     "{} {}",
-            //     extract_mangled_name_from_spec_line(spec_line),
-            //     lines[i + 1].trim()
-            // );
-
-            // emit_test_case_ast(non_verbose_spec_line, title_line, &mut output, false);
-            // emit_test_case_direct(non_verbose_spec_line, title_line, &mut output, false);
+            emit_test_case(spec_line, title_line, &mut output);
         }
     }
 }
 
-// fn extract_mangled_name_from_spec_line(spec_line: &str) -> &str {
-//     assert!(spec_line.starts_with("_R"));
-//     let end_of_mangled_name = spec_line.find(' ').unwrap();
-//     &spec_line[..end_of_mangled_name]
-// }
-
-fn emit_test_case_ast(spec_line: &str, title_line: &str, output: &mut impl Write) {
+fn emit_test_case(spec_line: &str, title_line: &str, output: &mut impl Write) {
     if spec_line.starts_with("_R") && title_line.starts_with("#") {
         let end_of_mangled_name = spec_line.find(' ').unwrap();
         let mangled = &spec_line[..end_of_mangled_name];
@@ -58,8 +34,7 @@ fn emit_test_case_ast(spec_line: &str, title_line: &str, output: &mut impl Write
             .replace(" ", "_")
             .replace("/", "_")
             .replace(",", "_")
-            .replace("-", "_")
-            + "_ast";
+            .replace("-", "_");
 
         writeln!(output, "#[test] #[allow(non_snake_case)] fn {}() {{", title).unwrap();
         writeln!(output, "  let demangled_expected = r#\"{}\"#;", demangled).unwrap();
@@ -79,45 +54,3 @@ fn emit_test_case_ast(spec_line: &str, title_line: &str, output: &mut impl Write
         writeln!(output, "}}").unwrap();
     }
 }
-
-// fn emit_test_case_direct(
-//     spec_line: &str,
-//     title_line: &str,
-//     output: &mut impl Write,
-//     verbose: bool,
-// ) {
-//     if spec_line.starts_with("_R") && title_line.starts_with("#") {
-//         let end_of_mangled_name = spec_line.find(' ').unwrap();
-//         let mangled = &spec_line[..end_of_mangled_name];
-//         let demangled = spec_line[end_of_mangled_name + 1..].trim();
-
-//         let mut title = title_line[1..]
-//             .trim()
-//             .replace(" ", "_")
-//             .replace("/", "_")
-//             .replace(",", "_")
-//             .replace("-", "_")
-//             + "_direct";
-
-//         if verbose {
-//             title += "_verbose";
-//         }
-
-//         writeln!(output, "#[test] #[allow(non_snake_case)] fn {}() {{", title).unwrap();
-//         writeln!(output, "  let demangled_expected = r#\"{}\"#;", demangled).unwrap();
-//         writeln!(
-//             output,
-//             "  let demangled_expected = Ok(demangled_expected.to_string());"
-//         ).unwrap();
-//         writeln!(
-//             output,
-//             "  let demangled_actual = ::demangle_symbol(\"{}\", {});",
-//             mangled, verbose
-//         ).unwrap();
-//         writeln!(
-//             output,
-//             "  assert_eq!(demangled_expected, demangled_actual);"
-//         ).unwrap();
-//         writeln!(output, "}}").unwrap();
-//     }
-// }
