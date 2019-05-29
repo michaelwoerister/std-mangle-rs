@@ -18,7 +18,7 @@ impl fmt::Display for RadixFmt {
         assert!(radix >= 2 && radix <= 62);
 
         if value == 0 {
-            write!(f, "0");
+            write!(f, "0")?;
         }
 
         let mut text = Vec::with_capacity(8);
