@@ -2,9 +2,8 @@
 #
 # File format: Every triple of lines where the first one starts with '#' and the
 # second one starts with "_R" is a test case. The first line gives the title of
-# the test, the second gives the mangled and (after the first whitespace)
-# verbose demangled version of the symbol, the third line gives the non-verbose
-# demangled version of the symbol.
+# the test and the second line gives the mangled and (after the first
+# whitespace) demangled version of the symbol.
 #
 # Anything that doesn't conform to the syntax above is supposed to be ignored.
 
@@ -126,124 +125,90 @@ _RNxNxXC7mycrateReNyC7mycrate3Foo3foo6helper <&str as mycrate::Foo>::foo::helper
 
 ## Generic functions
 
-// # Generic function with basic type argument
-// _RN16mycrate_abcd123f3barVImEE mycrate[abcd123f]::bar'<u32>
-                               mycrate::bar<u32>
+# Generic function with basic type argument
+_RINxC7mycrate3barmE mycrate::bar<u32>
 
-// # Generic function with named type argument
-// _RN16mycrate_abcd123f5closeVIN8std_12342fs4FileEEE mycrate[abcd123f]::close'<std[1234]::fs::File>
-                                                   mycrate::close<std::fs::File>
+# Generic function with named type argument
+_RINxC7mycrate5closeNxNyC3std2fs4FileE mycrate::close<std::fs::File>
 
-// # Generic function with tuple type argument
-// _RN16mycrate_abcd123f3bazVITccEEE mycrate[abcd123f]::baz'<(char,char)>
-                                  mycrate::baz<(char,char)>
+# Generic function with tuple type argument
+_RINxC7mycrate3bazTccEE mycrate::baz<(char,char)>
 
-// # Generic function with shared reference type argument
-// _RN16mycrate_abcd123f3bazVIReEE mycrate[abcd123f]::baz'<&str>
-                                mycrate::baz<&str>
+# Generic function with shared reference type argument
+_RINxC7mycrate3bazReE mycrate::baz<&str>
 
-// # Generic function with mutable reference type argument
-// _RN16mycrate_abcd123f3bazVIQeEE mycrate[abcd123f]::baz'<&mut str>
-                                mycrate::baz<&mut str>
+# Generic function with mutable reference type argument
+_RINxC7mycrate3bazQeE mycrate::baz<&mut str>
 
-// # Generic function with const pointer type argument
-// _RN16mycrate_abcd123f3bazVIPaEE mycrate[abcd123f]::baz'<*const i8>
-                                mycrate::baz<*const i8>
+# Generic function with const pointer type argument
+_RINxC7mycrate3bazPaE mycrate::baz<*const i8>
 
-// # Generic function with mut pointer type argument
-// _RN16mycrate_abcd123f3bazVIOhEE mycrate[abcd123f]::baz'<*mut u8>
-                                mycrate::baz<*mut u8>
+# Generic function with mut pointer type argument
+_RINxC7mycrate3bazOhE mycrate::baz<*mut u8>
 
-// # Generic function with function type argument
-// _RN16mycrate_abcd123f3bazVIFmJcEEE mycrate[abcd123f]::baz'<fn(u32) -> char>
-                                   mycrate::baz<fn(u32) -> char>
+# Generic function with function type argument
+_RINxC7mycrate3bazFG_mEcE mycrate::baz<fn(u32) -> char>
 
-// # Generic function with unsized array type argument
-// _RN16mycrate_abcd123f3bazVIAtEE mycrate[abcd123f]::baz'<[u16]>
-                                mycrate::baz<[u16]>
+# Generic function with unsized array type argument
+_RINxC7mycrate3bazStE mycrate::baz<[u16]>
 
-// # Generic function with sized array type argument
-// _RN16mycrate_abcd123f3bazVIA777sEE mycrate[abcd123f]::baz'<[i16; 777]>
-                                   mycrate::baz<[i16; 777]>
+# Generic function with sized array type argument
+_RINxC7mycrate3bazAsj309_E mycrate::baz<[i16; 777]>
 
-// # Generic function with named type parameter
-// _RN16mycrate_abcd123f3bazVIG1TEEE mycrate[abcd123f]::baz'<T>
-                                  mycrate::baz<T>
+# Generic function with placeholder type parameter
+_RINxC7mycrate3bazpE mycrate::baz<_>
 
-// # Generic function with disambiguated, named type parameter
-// _RN16mycrate_abcd123f3bazVIG1Ts9_EEE mycrate[abcd123f]::baz'<T[12]>
-                                     mycrate::baz<T>
+# Generic function with closure type argument
+_RINxC7mycrate3bazNCNxC7mycrate3foos1_0E mycrate::baz<mycrate::foo::{closure}[3]>
 
-# Generic function with unicode named type argument
-...
+# Generic function with disambiguated named type arguments
+_RINxC7mycrate3bazNxC7mycrates0_3FooE mycrate::baz<mycrate::Foo[2]>
 
-// # Generic function with closure type argument
-// _RN16mycrate_abcd123f3bazVIN16mycrate_abcd123f3fooV0Cs0_EEE mycrate[abcd123f]::baz'<mycrate[abcd123f]::foo'::{closure}[3]>
-                                                            mycrate::baz<mycrate::foo::{closure}[3]>
+# Generic function with named type argument defined in simple trait impl
+_RINxNyC3std3mem8align_ofNyNxYjNyC7mycrate9SomeTrait3foo3BarE std::mem::align_of<<usize as mycrate::SomeTrait>::foo::Bar>
 
-// # Generic function with disambiguated named type arguments
-// _RN16mycrate_abcd123f3bazVIN16mycrate_abcd123f3Foos_EEE mycrate[abcd123f]::baz'<mycrate[abcd123f]::Foo[2]>
-                                                        mycrate::baz<mycrate::Foo>
+# Generic function with named type argument defined in specialized trait impl
+_RINxNyC3std3mem8align_ofNyNxXs8_C7mycratejNyC7mycrate9SomeTrait3foo3BarE std::mem::align_of<<usize as mycrate::SomeTrait>::foo::Bar>
 
-// # Generic function with named type argument defined in simple trait impl
-// _RN8std_23453mem8align_ofVINXjN16mycrate_abcd123f9SomeTraitE3fooV3BarEEE std[2345]::mem::align_of'<<usize as mycrate[abcd123f]::SomeTrait>::foo'::Bar>
-                                                                         std::mem::align_of<<usize as mycrate::SomeTrait>::foo::Bar>
-
-// # Generic function with named type argument defined in specialized trait impl
-// _RN8std_23453mem8align_ofVINXjN16mycrate_abcd123f9SomeTraitEs_3fooV3BarEEE std[2345]::mem::align_of'<<usize as mycrate[abcd123f]::SomeTrait>[2]::foo'::Bar>
-                                                                           std::mem::align_of<<usize as mycrate::SomeTrait>::foo::Bar>
-
-// # Generic function with instantiating crate suffix
-// _RN16mycrate_abcd123f3barVImEE20some_other_crate_xxx mycrate[abcd123f]::bar'<u32> @ some_other_crate[xxx]
-                                                     mycrate::bar<u32>
+# Generic function with instantiating crate suffix
+_RINxC7mycrate3barmEC16some_other_crate mycrate::bar<u32> @ some_other_crate
 
 
 
 ## Inherent methods
 
-// # Inherent non-generic method
-// _RNXN8std_12342fs4FileE5closeVE <std[1234]::fs::File>::close'
-                                <std::fs::File>::close
+# Inherent non-generic method
+_RNxMs47_NyC3std2fsNyNyC3std2fs4File5close <std::fs::File>::close
 
-// # Inherent method with generic impl
-// _RNXN8std_12343vec3VecIcEE4pushVE <std[1234]::vec::Vec<char>>::push'
-                                  <std::vec::Vec<char>>::push
+# Inherent method with generic impl
+_RNxMs23_NyC3std3vecINyNyC3std3vec3VeccE4push <std::vec::Vec<char>>::push
 
-// # Generic inherent method
-// _RNXN8std_12346string6StringE6retainVIN7xxx_yyy9predicateVEEE <std[1234]::string::String>::retain'<xxx[yyy]::predicate'>
-                                                              <std::string::String>::retain<xxx::predicate>
+# Generic inherent method
+_RINxMs89_NyC3std6stringNyNyC3std6string6String6retainNxC3xxx9predicateE  <std::string::String>::retain<xxx::predicate>
 
-// # Generic inherent method with generic impl
-// _RNXN8std_12343vec3VecIsEE6retainVIN7xxx_yyy9predicateVEEE <std[1234]::vec::Vec<i16>>::retain'<xxx[yyy]::predicate'>
-                                                           <std::vec::Vec<i16>>::retain<xxx::predicate>
+# Generic inherent method with generic impl
+_RINxMs89_NyC3std3vecINyNyC3std3vec3VecsE6retainNxC3xxx9predicateE <std::vec::Vec<i16>>::retain<xxx::predicate>
 
-// # Inherent method with basic self type
-// _RNXi5to_leVE <isize>::to_le'
-              <isize>::to_le
+# Inherent method with basic self type
+_RNxMs64_NyC3std5isizei5to_le <isize>::to_le
 
-// # Inherent method with tuple self type
-// _RNXTcccE3fooVE <(char,char,char)>::foo'
-                <(char,char,char)>::foo
+# Inherent method with tuple self type
+_RNxMs2_C4quuxTcccE3foo <(char,char,char)>::foo
 
-// # Inherent method with array self type
-// _RNXAs4quuxVE <[i16]>::quux'
-              <[i16]>::quux
+# Inherent method with array self type
+_RNxMs44_C3fooSs4quux <[i16]>::quux
 
-// # Inherent method with function self type
-// _RNXFUKcE4quuxVE <unsafe extern "C" fn()>::quux'
-                 <unsafe extern "C" fn()>::quux
+# Inherent method with function self type
+_RNxMs1_C3fooFG_UKCEu4quux <unsafe extern "C" fn()>::quux
 
-// # Inherent method with reference self type
-// _RNXRa4quuxVE <&i8>::quux'
-              <&i8>::quux
+# Inherent method with reference self type
+_RNxMs_C3fooRa4quux <&i8>::quux
 
-// # Inherent method with pointer self type
-// _RNXPu4quuxVE <*const ()>::quux'
-              <*const ()>::quux
+# Inherent method with pointer self type
+_RNxMs90_C3fooPu4quux <*const ()>::quux
 
-// # Inherent method with disambiguated named self type
-// _RNXN7std_xxx3Foos_E4quuxVE <std[xxx]::Foo[2]>::quux'
-                            <std::Foo>::quux
+# Inherent method with disambiguated named self type
+_RNxMs10_C3stdNyC3stds_3Foo4quux <std::Foo[1]>::quux
 
 
 ## Trait methods
