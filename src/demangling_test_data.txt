@@ -277,16 +277,16 @@ _RNxMs10_C3stdNyC3stds_3Foo4quux <std::Foo[1]>::quux
 ## Compression
 
 # Compressed name prefix as absolute path
-_RNxXC3stdNyNyB4_3foo3FooBb_3bar <std::foo::Foo as std::foo>::bar
+_RNxXC3stdNyNyB2_3foo3FooB9_3bar <std::foo::Foo as std::foo>::bar
 
 # Compressed name prefix as type
-_RINxC3std3fooB2_E std::foo<std::foo>
+_RINxC3std3fooB0_E std::foo<std::foo>
 
 # Compressed name prefix as type name prefix
-_RINxC3std3fooNyB2_3BarE std::foo<std::foo::Bar>
+_RINxC3std3fooNyB0_3BarE std::foo<std::foo::Bar>
 
 # Progressive type compression
-_RINxC3std3fooTNyB4_3BarBe_EBd_E std::foo<(std::Bar,std::Bar),(std::Bar,std::Bar)>
+_RINxC3std3fooTNyB2_3BarBc_EBb_E std::foo<(std::Bar,std::Bar),(std::Bar,std::Bar)>
 
 // # Substituted instantiating crate suffix
 // _RN16mycrate_abcd123f3barVImEES_ mycrate[abcd123f]::bar'<u32> @ mycrate[abcd123f]

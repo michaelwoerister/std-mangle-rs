@@ -473,6 +473,9 @@ impl<'input> Parser<'input> {
     fn parse_backref(&mut self) -> Result<Parser<'input>, String> {
         let Base62Number(pos) = self.parse_base62_number()?;
 
+        // Account for the `_R` prefix
+        let pos = pos + 2;
+
         Ok(Parser {
             input: self.input,
             pos: pos as usize,
