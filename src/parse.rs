@@ -350,7 +350,7 @@ impl<'input> Parser<'input> {
         let c = self.cur();
 
         match c {
-            b'A' ... b'Z' | b'a' ... b'z' => {}
+            b'A' ..= b'Z' | b'a' ..= b'z' => {}
             c => return Err(format!("Invalid namespace character '{}'", c))
         };
 
