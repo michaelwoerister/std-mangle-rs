@@ -42,15 +42,18 @@ fn emit_test_case(spec_line: &str, title_line: &str, output: &mut impl Write) {
             output,
             "  let ast = ::mangled_symbol_to_ast(r#\"{}\"#).unwrap();",
             mangled
-        ).unwrap();
+        )
+        .unwrap();
         writeln!(
             output,
             "  let demangled_actual = ::ast_to_demangled_symbol(&ast);"
-        ).unwrap();
+        )
+        .unwrap();
         writeln!(
             output,
             "  assert_eq!(demangled_expected, demangled_actual);"
-        ).unwrap();
+        )
+        .unwrap();
         writeln!(output, "}}").unwrap();
     }
 }

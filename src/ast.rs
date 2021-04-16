@@ -20,12 +20,31 @@ pub struct Namespace(pub u8);
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum Path {
-    CrateRoot { id: Ident },
-    InherentImpl { impl_path: ImplPath, self_type: Type },
-    TraitImpl { impl_path: ImplPath, self_type: Type, trait_name: Arc<Path> },
-    TraitDef { self_type: Type, trait_name: Arc<Path> },
-    Nested { ns: Namespace, inner: Arc<Path>, ident: Ident },
-    Generic { inner: Arc<Path>, args: Vec<GenericArg> },
+    CrateRoot {
+        id: Ident,
+    },
+    InherentImpl {
+        impl_path: ImplPath,
+        self_type: Type,
+    },
+    TraitImpl {
+        impl_path: ImplPath,
+        self_type: Type,
+        trait_name: Arc<Path>,
+    },
+    TraitDef {
+        self_type: Type,
+        trait_name: Arc<Path>,
+    },
+    Nested {
+        ns: Namespace,
+        inner: Arc<Path>,
+        ident: Ident,
+    },
+    Generic {
+        inner: Arc<Path>,
+        args: Vec<GenericArg>,
+    },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]

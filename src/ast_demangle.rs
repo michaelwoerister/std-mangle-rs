@@ -24,7 +24,6 @@ impl AstDemangle for Symbol {
 
 impl AstDemangle for Ident {
     fn demangle_to_string(&self, out: &mut String) {
-
         self.u_ident.demangle_to_string(out);
         if self.dis != Base62Number(0) {
             write!(out, "[{}]", self.dis.0).unwrap();
@@ -44,20 +43,34 @@ impl AstDemangle for Path {
             Path::CrateRoot { ref id } => {
                 id.demangle_to_string(out);
             }
-            Path::InherentImpl { impl_path: _, ref self_type } => {
+            Path::InherentImpl {
+                impl_path: _,
+                ref self_type,
+            } => {
                 out.push('<');
                 self_type.demangle_to_string(out);
                 out.push('>');
             }
-            Path::TraitImpl { impl_path: _, ref self_type, ref trait_name } |
-            Path::TraitDef { ref self_type, ref trait_name } => {
+            Path::TraitImpl {
+                impl_path: _,
+                ref self_type,
+                ref trait_name,
+            }
+            | Path::TraitDef {
+                ref self_type,
+                ref trait_name,
+            } => {
                 out.push('<');
                 self_type.demangle_to_string(out);
                 out.push_str(" as ");
                 trait_name.demangle_to_string(out);
                 out.push('>');
             }
-            Path::Nested { ref ns, ref inner, ref ident } => {
+            Path::Nested {
+                ref ns,
+                ref inner,
+                ref ident,
+            } => {
                 inner.demangle_to_string(out);
 
                 if *ns == Namespace(b'C') {
@@ -67,7 +80,10 @@ impl AstDemangle for Path {
                     ident.demangle_to_string(out);
                 }
             }
-            Path::Generic { ref inner, ref args } => {
+            Path::Generic {
+                ref inner,
+                ref args,
+            } => {
                 inner.demangle_to_string(out);
                 out.push('<');
                 for arg in args {
@@ -78,7 +94,6 @@ impl AstDemangle for Path {
                 out.push('>');
             }
         }
-
     }
 }
 
@@ -153,7 +168,7 @@ impl AstDemangle for Type {
                 out.push_str("&mut ");
                 ty.demangle_to_string(out);
             }
-            Type::RawPtrConst(ref ty)  => {
+            Type::RawPtrConst(ref ty) => {
                 out.push_str("*const ");
                 ty.demangle_to_string(out);
             }
@@ -167,7 +182,6 @@ impl AstDemangle for Type {
             Type::DynTrait(ref bounds, _) => {
                 bounds.demangle_to_string(out);
             }
-
         }
     }
 }
@@ -218,7 +232,6 @@ impl AstDemangle for Abi {
     }
 }
 
-
 impl AstDemangle for DynTrait {
     fn demangle_to_string(&self, out: &mut String) {
         self.path.demangle_to_string(out);
@@ -234,7 +247,6 @@ impl AstDemangle for DynTrait {
             out.pop();
             out.push('>');
         }
-
     }
 }
 
@@ -249,22 +261,21 @@ impl AstDemangle for DynTraitAssocBinding {
 impl AstDemangle for Const {
     fn demangle_to_string(&self, out: &mut String) {
         match *self {
-            Const::Value(Type::BasicType(BasicType::I8), i) |
-            Const::Value(Type::BasicType(BasicType::I16), i) |
-            Const::Value(Type::BasicType(BasicType::I32), i) |
-            Const::Value(Type::BasicType(BasicType::I64), i) |
-            Const::Value(Type::BasicType(BasicType::I128), i) |
-            Const::Value(Type::BasicType(BasicType::Isize), i) |
-            Const::Value(Type::BasicType(BasicType::U8), i) |
-            Const::Value(Type::BasicType(BasicType::U16), i) |
-            Const::Value(Type::BasicType(BasicType::U32), i) |
-            Const::Value(Type::BasicType(BasicType::U64), i) |
-            Const::Value(Type::BasicType(BasicType::U128), i) |
-            Const::Value(Type::BasicType(BasicType::Usize), i) => {
+            Const::Value(Type::BasicType(BasicType::I8), i)
+            | Const::Value(Type::BasicType(BasicType::I16), i)
+            | Const::Value(Type::BasicType(BasicType::I32), i)
+            | Const::Value(Type::BasicType(BasicType::I64), i)
+            | Const::Value(Type::BasicType(BasicType::I128), i)
+            | Const::Value(Type::BasicType(BasicType::Isize), i)
+            | Const::Value(Type::BasicType(BasicType::U8), i)
+            | Const::Value(Type::BasicType(BasicType::U16), i)
+            | Const::Value(Type::BasicType(BasicType::U32), i)
+            | Const::Value(Type::BasicType(BasicType::U64), i)
+            | Const::Value(Type::BasicType(BasicType::U128), i)
+            | Const::Value(Type::BasicType(BasicType::Usize), i) => {
                 write!(out, "{}", i).unwrap();
             }
-            Const::Placeholder(ref ty) |
-            Const::Value(ref ty, _) => {
+            Const::Placeholder(ref ty) | Const::Value(ref ty, _) => {
                 out.push_str("{const ");
                 ty.demangle_to_string(out);
                 out.push('}');

@@ -7,15 +7,12 @@ use std::sync::Arc;
 
 pub const EOT: u8 = 5; // ASCII "end of transmission"
 
-
 pub fn parse(input: &[u8]) -> Result<Symbol, String> {
-    let mut parser = Parser {
-        input,
-        pos: 0,
-    };
+    let mut parser = Parser { input, pos: 0 };
 
-    parser.parse_symbol()
-          .map_err(|e| format!("at position {}: {}", parser.pos, e))
+    parser
+        .parse_symbol()
+        .map_err(|e| format!("at position {}: {}", parser.pos, e))
 }
 
 pub struct Parser<'input> {
@@ -24,10 +21,8 @@ pub struct Parser<'input> {
 }
 
 impl<'input> Parser<'input> {
-
     fn parse_symbol(&mut self) -> Result<Symbol, String> {
-
-        if &self.input[0 .. 2] != b"_R" {
+        if &self.input[0..2] != b"_R" {
             return Err(format!("Not a Rust symbol"));
         }
 
@@ -74,15 +69,9 @@ impl<'input> Parser<'input> {
 
     fn parse_generic_arg(&mut self) -> Result<GenericArg, String> {
         Ok(match self.cur() {
-            b'L' => {
-                GenericArg::Lifetime(self.parse_lifetime()?)
-            }
-            b'K' => {
-                GenericArg::Const(self.parse_const()?)
-            }
-            _ => {
-                GenericArg::Type(self.parse_type()?)
-            }
+            b'L' => GenericArg::Lifetime(self.parse_lifetime()?),
+            b'K' => GenericArg::Const(self.parse_const()?),
+            _ => GenericArg::Type(self.parse_type()?),
         })
     }
 
@@ -134,7 +123,7 @@ impl<'input> Parser<'input> {
             is_unsafe,
             abi,
             param_types,
-            return_type
+            return_type,
         })
     }
 
@@ -146,10 +135,7 @@ impl<'input> Parser<'input> {
         }
         self.eat(b'E', "<dyn-trait>")?;
 
-        Ok(DynBounds {
-            binder,
-            traits,
-        })
+        Ok(DynBounds { binder, traits })
     }
 
     fn parse_dyn_trait(&mut self) -> Result<DynTrait, String> {
@@ -201,15 +187,11 @@ impl<'input> Parser<'input> {
             b'y' => Type::BasicType(BasicType::U64),
             b'z' => Type::BasicType(BasicType::Never),
 
-            b'A' => {
-                Type::Array(Arc::new(self.parse_type()?), Arc::new(self.parse_const()?))
-            }
+            b'A' => Type::Array(Arc::new(self.parse_type()?), Arc::new(self.parse_const()?)),
 
-            b'S' => {
-                Type::Slice(Arc::new(self.parse_type()?))
-            }
+            b'S' => Type::Slice(Arc::new(self.parse_type()?)),
 
-            b'C' | b'M' | b'X' | b'Y' |b'N' | b'I' => {
+            b'C' | b'M' | b'X' | b'Y' | b'N' | b'I' => {
                 self.pos -= 1;
                 Type::Named(Arc::new(self.parse_path()?))
             }
@@ -245,21 +227,13 @@ impl<'input> Parser<'input> {
                 Type::RefMut(lifetime, Arc::new(self.parse_type()?))
             }
 
-            b'P' => {
-                Type::RawPtrConst(Arc::new(self.parse_type()?))
-            }
+            b'P' => Type::RawPtrConst(Arc::new(self.parse_type()?)),
 
-            b'O' => {
-                Type::RawPtrMut(Arc::new(self.parse_type()?))
-            }
+            b'O' => Type::RawPtrMut(Arc::new(self.parse_type()?)),
 
-            b'F' => {
-                Type::Fn(Arc::new(self.parse_fn_sig()?))
-            }
+            b'F' => Type::Fn(Arc::new(self.parse_fn_sig()?)),
 
-            b'D' => {
-                Type::DynTrait(Arc::new(self.parse_dyn_bounds()?), self.parse_lifetime()?)
-            }
+            b'D' => Type::DynTrait(Arc::new(self.parse_dyn_bounds()?), self.parse_lifetime()?),
 
             b'B' => {
                 let mut parser = self.parse_backref()?;
@@ -267,7 +241,10 @@ impl<'input> Parser<'input> {
             }
 
             c => {
-                return Err(format!("Expected start of <type>, found {} instead.", c as char));
+                return Err(format!(
+                    "Expected start of <type>, found {} instead.",
+                    c as char
+                ));
             }
         })
     }
@@ -290,37 +267,27 @@ impl<'input> Parser<'input> {
         self.pos += 1;
 
         Ok(match tag {
-            b'C' => {
-                Path::CrateRoot {
-                    id: self.parse_ident()?,
-                }
-            }
-            b'M' => {
-                Path::InherentImpl {
-                    impl_path: self.parse_impl_path()?,
-                    self_type: self.parse_type()?,
-                }
-            }
-            b'X' => {
-                Path::TraitImpl {
-                    impl_path: self.parse_impl_path()?,
-                    self_type: self.parse_type()?,
-                    trait_name: Arc::new(self.parse_path()?),
-                }
-            }
-            b'Y' => {
-                Path::TraitDef {
-                    self_type: self.parse_type()?,
-                    trait_name: Arc::new(self.parse_path()?),
-                }
-            }
-            b'N' => {
-                Path::Nested {
-                    ns: self.parse_namespace()?,
-                    inner: Arc::new(self.parse_path()?),
-                    ident: self.parse_ident()?,
-                }
-            }
+            b'C' => Path::CrateRoot {
+                id: self.parse_ident()?,
+            },
+            b'M' => Path::InherentImpl {
+                impl_path: self.parse_impl_path()?,
+                self_type: self.parse_type()?,
+            },
+            b'X' => Path::TraitImpl {
+                impl_path: self.parse_impl_path()?,
+                self_type: self.parse_type()?,
+                trait_name: Arc::new(self.parse_path()?),
+            },
+            b'Y' => Path::TraitDef {
+                self_type: self.parse_type()?,
+                trait_name: Arc::new(self.parse_path()?),
+            },
+            b'N' => Path::Nested {
+                ns: self.parse_namespace()?,
+                inner: Arc::new(self.parse_path()?),
+                ident: self.parse_ident()?,
+            },
             b'I' => {
                 let inner = self.parse_path()?;
 
@@ -350,8 +317,8 @@ impl<'input> Parser<'input> {
         let c = self.cur();
 
         match c {
-            b'A' ..= b'Z' | b'a' ..= b'z' => {}
-            c => return Err(format!("Invalid namespace character '{}'", c))
+            b'A'..=b'Z' | b'a'..=b'z' => {}
+            c => return Err(format!("Invalid namespace character '{}'", c)),
         };
 
         self.pos += 1;
@@ -368,7 +335,7 @@ impl<'input> Parser<'input> {
 
         Ok(Ident {
             dis,
-            u_ident: self.parse_uident()?
+            u_ident: self.parse_uident()?,
         })
     }
 
@@ -390,26 +357,22 @@ impl<'input> Parser<'input> {
 
         self.pos = end;
 
-        let bytes = &self.input[start.. end];
+        let bytes = &self.input[start..end];
 
         let ident = if punycode {
             charset::decode_punycode_ident(bytes)?
         } else {
-            String::from_utf8(bytes.to_owned()).map_err(|e| {
-                format!("{:?}", e)
-            })?
+            String::from_utf8(bytes.to_owned()).map_err(|e| format!("{:?}", e))?
         };
 
         Ok(UIdent(ident))
     }
-
 
     fn parse_decimal_number(&mut self) -> Result<DecimalNumber, String> {
         Ok(DecimalNumber(self.parse_number(10)?))
     }
 
     fn parse_base62_number(&mut self) -> Result<Base62Number, String> {
-
         let n = if self.cur() == b'_' {
             0
         } else {

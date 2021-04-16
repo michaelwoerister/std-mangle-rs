@@ -20,7 +20,8 @@ pub fn expected<T>(
             "{} or {}",
             char_to_str(expected_chars[0]),
             char_to_str(expected_chars[1])
-        ).unwrap();
+        )
+        .unwrap();
     } else {
         for i in 0..expected_chars.len() - 1 {
             write!(message, "{}, ", char_to_str(expected_chars[i])).unwrap();
@@ -30,7 +31,8 @@ pub fn expected<T>(
             message,
             "or {}",
             char_to_str(expected_chars[expected_chars.len() - 1])
-        ).unwrap();
+        )
+        .unwrap();
     }
 
     write!(
@@ -39,7 +41,8 @@ pub fn expected<T>(
         char_to_str(found_char as char),
         verb,
         noun
-    ).unwrap();
+    )
+    .unwrap();
 
     Err(message)
 }
