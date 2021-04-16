@@ -8,7 +8,7 @@ pub fn expected<T>(
 ) -> Result<T, String> {
     let expected_chars = expected_chars.chars().collect::<Vec<_>>();
 
-    assert!(expected_chars.len() > 0);
+    assert!(!expected_chars.is_empty());
 
     let mut message = "Expected ".to_string();
 
@@ -20,17 +20,19 @@ pub fn expected<T>(
             "{} or {}",
             char_to_str(expected_chars[0]),
             char_to_str(expected_chars[1])
-        ).unwrap();
+        )
+        .unwrap();
     } else {
-        for i in 0..expected_chars.len() - 1 {
-            write!(message, "{}, ", char_to_str(expected_chars[i])).unwrap();
+        for &c in expected_chars.iter().take(expected_chars.len() - 1) {
+            write!(message, "{}, ", char_to_str(c)).unwrap();
         }
 
         write!(
             message,
             "or {}",
             char_to_str(expected_chars[expected_chars.len() - 1])
-        ).unwrap();
+        )
+        .unwrap();
     }
 
     write!(
@@ -39,7 +41,8 @@ pub fn expected<T>(
         char_to_str(found_char as char),
         verb,
         noun
-    ).unwrap();
+    )
+    .unwrap();
 
     Err(message)
 }
