@@ -11,7 +11,7 @@ fn main() {
     let test_case_definitions_path = Path::new("src").join("demangling_test_data.txt");
 
     println!(
-        "cargo:rerun-if-env-changed={}",
+        "cargo:rerun-if-changed={}",
         test_case_definitions_path.to_string_lossy()
     );
 
