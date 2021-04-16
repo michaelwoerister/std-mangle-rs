@@ -392,7 +392,6 @@ impl<'input> Parser<'input> {
         }
     }
 
-    #[must_use]
     fn eat(&mut self, c: u8, noun: &str) -> Result<(), String> {
         if self.cur() != c {
             return expected(str::from_utf8(&[c]).unwrap(), self.cur(), "parsing", noun);
@@ -412,7 +411,6 @@ impl<'input> Parser<'input> {
         }
     }
 
-    #[must_use]
     fn parse_number(&mut self, radix: u8) -> Result<u64, String> {
         if ascii_digit_to_value(self.cur(), radix).is_none() {
             return Err(format!(
@@ -432,7 +430,6 @@ impl<'input> Parser<'input> {
         Ok(value)
     }
 
-    #[must_use]
     fn parse_backref(&mut self) -> Result<Parser<'input>, String> {
         let Base62Number(pos) = self.parse_base62_number()?;
 

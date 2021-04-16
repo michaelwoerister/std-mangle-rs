@@ -23,8 +23,8 @@ pub fn expected<T>(
         )
         .unwrap();
     } else {
-        for i in 0..expected_chars.len() - 1 {
-            write!(message, "{}, ", char_to_str(expected_chars[i])).unwrap();
+        for &c in expected_chars.iter().take(expected_chars.len() - 1) {
+            write!(message, "{}, ", char_to_str(c)).unwrap();
         }
 
         write!(

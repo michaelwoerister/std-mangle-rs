@@ -59,12 +59,12 @@ mod tests {
 
     #[test]
     fn ascii_digit_to_value_cross_check() {
-        for i in 0..DIGITS.len() {
+        for (i, &d) in DIGITS.iter().enumerate() {
             for radix in 0..DIGITS.len() {
                 if i < radix {
-                    assert_eq!(Some(i as u64), ascii_digit_to_value(DIGITS[i], radix as u8));
+                    assert_eq!(Some(i as u64), ascii_digit_to_value(d, radix as u8));
                 } else {
-                    assert_eq!(None, ascii_digit_to_value(DIGITS[i], radix as u8));
+                    assert_eq!(None, ascii_digit_to_value(d, radix as u8));
                 }
             }
         }
