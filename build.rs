@@ -10,6 +10,11 @@ fn main() {
 
     let test_case_definitions_path = Path::new("src").join("demangling_test_data.txt");
 
+    println!(
+        "cargo:rerun-if-env-changed={}",
+        test_case_definitions_path.to_string_lossy()
+    );
+
     let test_case_definitions = BufReader::new(File::open(test_case_definitions_path).unwrap());
 
     let lines: Vec<_> = test_case_definitions.lines().map(|l| l.unwrap()).collect();
