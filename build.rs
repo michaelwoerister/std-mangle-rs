@@ -15,7 +15,7 @@ fn main() {
     let lines: Vec<_> = test_case_definitions.lines().map(|l| l.unwrap()).collect();
 
     for i in 1..lines.len() - 1 {
-        if lines[i].starts_with("_R") && lines[i - 1].starts_with("#") {
+        if lines[i].starts_with("_R") && lines[i - 1].starts_with('#') {
             let title_line = &lines[i - 1];
             let spec_line = &lines[i];
             emit_test_case(spec_line, title_line, &mut output);
@@ -24,7 +24,7 @@ fn main() {
 }
 
 fn emit_test_case(spec_line: &str, title_line: &str, output: &mut impl Write) {
-    if spec_line.starts_with("_R") && title_line.starts_with("#") {
+    if spec_line.starts_with("_R") && title_line.starts_with('#') {
         let end_of_mangled_name = spec_line.find(' ').unwrap();
         let mangled = &spec_line[..end_of_mangled_name];
         let demangled = spec_line[end_of_mangled_name + 1..].trim();

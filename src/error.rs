@@ -8,7 +8,7 @@ pub fn expected<T>(
 ) -> Result<T, String> {
     let expected_chars = expected_chars.chars().collect::<Vec<_>>();
 
-    assert!(expected_chars.len() > 0);
+    assert!(!expected_chars.is_empty());
 
     let mut message = "Expected ".to_string();
 

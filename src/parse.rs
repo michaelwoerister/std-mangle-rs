@@ -23,7 +23,7 @@ pub struct Parser<'input> {
 impl<'input> Parser<'input> {
     fn parse_symbol(&mut self) -> Result<Symbol, String> {
         if &self.input[0..2] != b"_R" {
-            return Err(format!("Not a Rust symbol"));
+            return Err("Not a Rust symbol".to_string());
         }
 
         self.pos += 2;
@@ -352,7 +352,7 @@ impl<'input> Parser<'input> {
         let end = start + num_bytes as usize;
 
         if end > self.input.len() {
-            return Err(format!("identifier extend beyond end of input"));
+            return Err("identifier extend beyond end of input".to_string());
         }
 
         self.pos = end;

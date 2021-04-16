@@ -15,7 +15,7 @@ impl fmt::Display for RadixFmt {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let RadixFmt { radix, mut value } = *self;
 
-        assert!(radix >= 2 && radix <= 62);
+        assert!((2..=62).contains(&radix));
 
         if value == 0 {
             write!(f, "0")?;
@@ -26,7 +26,7 @@ impl fmt::Display for RadixFmt {
 
         while value > 0 {
             let digit = value % radix;
-            value = value / radix;
+            value /= radix;
             text.push(DIGITS[digit as usize]);
         }
 
@@ -89,7 +89,7 @@ mod tests {
 
     quickcheck! {
         fn radix_fmt_vs_std(value: u64, base: u8) -> bool {
-            if base < 2 || base > 36 {
+            if !(2..=36).contains(&base) {
                 return true
             }
 

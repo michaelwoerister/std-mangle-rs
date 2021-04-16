@@ -75,7 +75,7 @@ impl AstDemangle for Path {
 
                 if *ns == Namespace(b'C') {
                     write!(out, "::{{closure}}[{}]", ident.dis.0).unwrap();
-                } else if ident.u_ident.0.len() > 0 {
+                } else if !ident.u_ident.0.is_empty() {
                     out.push_str("::");
                     ident.demangle_to_string(out);
                 }
@@ -101,7 +101,7 @@ impl AstDemangle for DynBounds {
     fn demangle_to_string(&self, out: &mut String) {
         for tr in self.traits.iter() {
             tr.demangle_to_string(out);
-            out.push_str("+");
+            out.push('+');
         }
 
         out.pop();
@@ -137,31 +137,31 @@ impl AstDemangle for Type {
                 bt.demangle_to_string(out);
             }
             Type::Array(ref inner, ref len) => {
-                out.push_str("[");
+                out.push('[');
                 inner.demangle_to_string(out);
                 out.push_str("; ");
                 len.demangle_to_string(out);
-                out.push_str("]");
+                out.push(']');
             }
             Type::Slice(ref inner) => {
-                out.push_str("[");
+                out.push('[');
                 inner.demangle_to_string(out);
-                out.push_str("]");
+                out.push(']');
             }
             Type::Named(ref path) => {
                 path.demangle_to_string(out);
             }
             Type::Tuple(ref inner) => {
-                out.push_str("(");
+                out.push('(');
                 for ty in inner {
                     ty.demangle_to_string(out);
-                    out.push_str(",");
+                    out.push(',');
                 }
                 out.pop();
-                out.push_str(")");
+                out.push(')');
             }
             Type::Ref(_, ref ty) => {
-                out.push_str("&");
+                out.push('&');
                 ty.demangle_to_string(out);
             }
             Type::RefMut(_, ref ty) => {
@@ -195,20 +195,20 @@ impl AstDemangle for FnSig {
         if let Some(ref abi) = self.abi {
             out.push_str("extern ");
             abi.demangle_to_string(out);
-            out.push_str(" ");
+            out.push(' ');
         }
 
         out.push_str("fn(");
 
-        if self.param_types.len() > 0 {
+        if !self.param_types.is_empty() {
             for param_type in self.param_types.iter() {
                 param_type.demangle_to_string(out);
-                out.push_str(",");
+                out.push(',');
             }
             out.pop();
         }
 
-        out.push_str(")");
+        out.push(')');
 
         if self.return_type != Type::BasicType(BasicType::Unit) {
             out.push_str(" -> ");
@@ -236,7 +236,7 @@ impl AstDemangle for DynTrait {
     fn demangle_to_string(&self, out: &mut String) {
         self.path.demangle_to_string(out);
 
-        if self.assoc_type_bindings.len() > 0 {
+        if !self.assoc_type_bindings.is_empty() {
             out.push('<');
 
             for binding in self.assoc_type_bindings.iter() {
